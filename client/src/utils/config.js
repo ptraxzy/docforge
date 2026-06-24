@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const CONFIG_DIR = path.join(process.env.HOME || '/root', '.docforge');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-const DEFAULT_SERVER_URL = 'http://ip.lubu.biz.id';
+const DEFAULT_SERVER_URL = 'http://ip.lubu.biz.id:8000';
 
 export function getConfig() {
   try {

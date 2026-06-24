@@ -4,7 +4,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     ports:
-      - "80:8000"  # Expose directly on port 80 for production access
+      - "8000:8000"  # Map to port 8000 because port 80 is already in use by Nginx/other services
     environment:
       - AI_BASE_URL=https://ai.sumopod.com/v1
       - AI_API_KEY=sk-5hDD09seVdyy2zxuOqr7Uw

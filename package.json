@@ -1,0 +1,10 @@
+{
+  "name": "docforge-project",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DocForge root wrapper for easy execution",
+  "scripts": {
+    "generate": "npm --prefix client install && node client/src/index.js generate",
+    "serve": "npm --prefix client install && node client/src/index.js serve"
+  }
+}

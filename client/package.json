@@ -1,7 +1,10 @@
 {
-  "name": "docforge",
+  "name": "@ptraxzy/docforge",
   "version": "0.1.0",
   "description": "AI-powered documentation generator - open source",
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "src/index.js",
   "type": "module",
   "bin": {

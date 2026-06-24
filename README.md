@@ -20,20 +20,30 @@ DocForge adalah tools buat generate dokumentasi dari codebase secara otomatis pa
 
 ## Quick Start
 
-### Option 1: Use hosted server
+### Option 1: Run instantly with npx (Recommended — No Setup)
+
+You don't even need to clone the repository or install anything. Just run:
 
 ```bash
-# Install CLI
-npm install -g docforge
-
-# Set server URL (lu bisa deploy server sendiri atau pake public server)
-docforge set-server https://docforge-ptraxzy.loca.lt
-
-# Generate docs
-docforge generate ./my-project
+npx @ptraxzy/docforge generate
 ```
 
-### Option 2: Self-host with Docker (recommended)
+This will automatically scan your code files and generate documentation using our active public VPS backend.
+
+### Option 2: Clone and run locally
+
+If you cloned this repository, you can run it with a single command from the root directory:
+
+```bash
+# Clone the repository
+git clone https://github.com/ptraxzy/docforge.git
+cd docforge
+
+# Generate docs for any project (defaults to current directory)
+npm run generate
+```
+
+### Option 3: Self-host with Docker (advanced)
 
 ```bash
 # Clone repo

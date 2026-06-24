@@ -92,6 +92,7 @@ export async function generate(projectPath, options) {
       timeout: 120000, // 2 min timeout for AI generation
       headers: {
         'Content-Type': 'application/json',
+        'Bypass-Tunnel-Reminder': 'true',
       },
     });
 

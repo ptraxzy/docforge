@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 const CONFIG_DIR = path.join(process.env.HOME || '/root', '.docforge');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
-const DEFAULT_SERVER_URL = 'https://full-cars-notice.loca.lt';
+const DEFAULT_SERVER_URL = 'https://docforge-ptraxzy.loca.lt';
 
 export function getConfig() {
   try {

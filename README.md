@@ -25,7 +25,7 @@ DocForge adalah tools buat generate dokumentasi dari codebase secara otomatis pa
 You don't even need to clone the repository or install anything. Just run:
 
 ```bash
-npx @ptraxzy/docforge generate
+npx @ultramaxoo/docforge generate
 ```
 
 This will automatically scan your code files and generate documentation using our active public VPS backend.

@@ -141,7 +141,7 @@ export async function generate(projectPath, options) {
 
   try {
     const response = await axios.post(`${serverUrl}/generate`, payload, {
-      timeout: 120000, // 2 min timeout for AI generation
+      timeout: 600000, // 10 min timeout for AI generation
       headers: {
         'Content-Type': 'application/json',
         'Bypass-Tunnel-Reminder': 'true',

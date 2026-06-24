@@ -1,0 +1,46 @@
+services:
+  # ─── DocForge Server ─────────────────────────────────────────────
+  docforge:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - AI_BASE_URL=${AI_BASE_URL:-http://ollama:11434/v1}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_MODEL=${AI_MODEL:-llama3}
+      - MAX_TOKENS=${MAX_TOKENS:-4000}
+      - TEMPERATURE=${TEMPERATURE:-0.7}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE:-10}
+      - MAX_FILE_SIZE=${MAX_FILE_SIZE:-500000}
+      - MAX_FILES=${MAX_FILES:-100}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    networks:
+      - docforge-net
+
+  # ─── Ollama (Self-hosted AI) ────────────────────────────────────
+  # Remove this service if using a cloud AI provider (OpenAI, OpenRouter, etc.)
+  # and update AI_BASE_URL accordingly.
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - docforge-net
+    # To pre-pull a model, run after starting:
+    #   docker compose exec ollama ollama pull llama3
+
+volumes:
+  ollama-data:
+
+networks:
+  docforge-net:
+    driver: bridge

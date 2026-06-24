@@ -1,0 +1,19 @@
+services:
+  docforge:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "80:8000"  # Expose directly on port 80 for production access
+    environment:
+      - AI_BASE_URL=https://ai.sumopod.com/v1
+      - AI_API_KEY=sk-5hDD09seVdyy2zxuOqr7Uw
+      - AI_MODEL=MiniMax-M2.7-highspeed
+      - MAX_TOKENS=16000
+      - TEMPERATURE=0.7
+      - RATE_LIMIT_PER_MINUTE=60  # Higher limit for production
+      - MAX_FILE_SIZE=500000
+      - MAX_FILES=100
+      - CORS_ORIGINS=*
+      - LOG_LEVEL=INFO
+    restart: unless-stopped

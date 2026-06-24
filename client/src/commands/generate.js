@@ -2,17 +2,77 @@ import axios from 'axios';
 import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs-extra';
+import prompts from 'prompts';
 import { getServerUrl } from '../utils/config.js';
 import { scanCodeFiles, getProjectName } from '../utils/fileScanner.js';
 
 export async function generate(projectPath, options) {
   const serverUrl = options.server || getServerUrl();
-  const outputDir = options.output || './docs';
+  let outputDir = options.output || './docs';
 
-  console.log(chalk.blue('📄 DocForge - AI Documentation Generator\n'));
-  console.log(chalk.gray(`Project: ${projectPath || '.'}`));
-  console.log(chalk.gray(`Server: ${serverUrl}`));
-  console.log(chalk.gray(`Output: ${outputDir}\n`));
+  // 1. Setup default generation options
+  const docOptions = {
+    include_readme: true,
+    include_api: true,
+    include_architecture: false,
+    include_changelog: false,
+  };
+
+  // 2. Check if we should run interactively
+  // Run interactive prompts if no command line override flags are passed
+  const hasFlags = process.argv.slice(2).some(arg => arg.startsWith('-'));
+
+  if (!hasFlags) {
+    console.log(chalk.blue('📄 DocForge - Interactive Document Generator\n'));
+    
+    const questions = [
+      {
+        type: 'multiselect',
+        name: 'files',
+        message: 'Select documentation files to generate:',
+        choices: [
+          { title: 'README.md (Project overview & setup)', value: 'readme', selected: true },
+          { title: 'API.md (Reference of endpoints/classes/functions)', value: 'api', selected: true },
+          { title: 'ARCHITECTURE.md (High-level architecture design)', value: 'architecture', selected: false },
+          { title: 'CHANGELOG.md (Version histories)', value: 'changelog', selected: false }
+        ],
+        hint: '- Space to select. Enter to submit.'
+      },
+      {
+        type: 'text',
+        name: 'outputDir',
+        message: 'Enter output directory:',
+        initial: outputDir
+      },
+      {
+        type: 'confirm',
+        name: 'confirm',
+        message: 'Ready to generate docs with AI?',
+        initial: true
+      }
+    ];
+
+    const response = await prompts(questions);
+
+    // If cancelled (Ctrl+C) or chosen No
+    if (response.confirm === undefined || !response.confirm) {
+      console.log(chalk.gray('\nGeneration cancelled.'));
+      process.exit(0);
+    }
+
+    docOptions.include_readme = response.files.includes('readme');
+    docOptions.include_api = response.files.includes('api');
+    docOptions.include_architecture = response.files.includes('architecture');
+    docOptions.include_changelog = response.files.includes('changelog');
+    outputDir = response.outputDir;
+    console.log(); // Blank line for clean spacing
+  } else {
+    // Non-interactive mode (using CLI flags)
+    console.log(chalk.blue('📄 DocForge - AI Documentation Generator\n'));
+    console.log(chalk.gray(`Project: ${projectPath || '.'}`));
+    console.log(chalk.gray(`Server:  ${serverUrl}`));
+    console.log(chalk.gray(`Output:  ${outputDir}\n`));
+  }
 
   // Scan for code files
   console.log(chalk.yellow('🔍 Scanning code files...'));
@@ -37,14 +97,6 @@ export async function generate(projectPath, options) {
 
   // Prepare request
   const projectName = getProjectName(projectPath || process.cwd());
-  
-  // 1. Defaults
-  const docOptions = {
-    include_readme: true,
-    include_api: true,
-    include_architecture: false,
-    include_changelog: false,
-  };
 
   // 2. Load config from .docforge/config.json if it exists
   const projectRoot = projectPath || process.cwd();

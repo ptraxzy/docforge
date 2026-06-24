@@ -1,6 +1,6 @@
 {
   "name": "@ultramaxoo/docforge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-powered documentation generator - open source",
   "publishConfig": {
     "access": "public"
@@ -28,6 +28,7 @@
     "commander": "^12.1.0",
     "dotenv": "^16.4.5",
     "fast-glob": "^3.3.3",
-    "fs-extra": "^11.2.0"
+    "fs-extra": "^11.2.0",
+    "prompts": "^2.4.2"
   }
 }

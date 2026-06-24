@@ -14,7 +14,7 @@ npm install -g docforge
 npx docforge generate
 
 # Set your DocForge server URL
-docforge set-server http://your-server:8000
+docforge set-server https://docforge-ptraxzy.loca.lt
 
 # Generate docs for current project
 docforge generate
@@ -85,7 +85,7 @@ Set the DocForge server URL.
 
 ```bash
 docforge set-server http://localhost:8000
-docforge set-server https://docforge.yourserver.com
+docforge set-server https://docforge-ptraxzy.loca.lt
 ```
 
 ### `docforge get-server`

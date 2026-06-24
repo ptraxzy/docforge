@@ -27,7 +27,7 @@ DocForge adalah tools buat generate dokumentasi dari codebase secara otomatis pa
 npm install -g docforge
 
 # Set server URL (lu bisa deploy server sendiri atau pake public server)
-docforge set-server https://docforge.example.com
+docforge set-server https://docforge-ptraxzy.loca.lt
 
 # Generate docs
 docforge generate ./my-project

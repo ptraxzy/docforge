@@ -46,5 +46,5 @@ echo "=== 🐳 Building & Running DocForge Container ==="
 sudo docker compose -f docker-compose.prod.yml up --build -d
 
 echo "=== ✅ Deployment Complete! ==="
-echo "DocForge Server is now online at http://ip.lubu.biz.id/docforge"
+echo "DocForge Server is now online at http://ip.lubu.biz.id:45557"
 echo "You can check status using: sudo docker compose -f docker-compose.prod.yml ps"

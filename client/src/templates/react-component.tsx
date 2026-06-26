@@ -320,7 +320,7 @@ export default function Docs() {
 
   return (
     <div className="min-h-screen bg-[var(--doc-bg)] text-[var(--doc-text)] font-sans transition-colors duration-200 antialiased">
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         :root {
           --doc-primary: #6366f1; /* Indigo-500 */
           --doc-primary-hover: #4f46e5;
@@ -511,7 +511,7 @@ export default function Docs() {
         .prose tr:hover {
           background-color: rgba(99, 102, 241, 0.02);
         }
-      `}</style>
+      ` }} />
       
       {/* Header */}
       <header className="sticky top-0 z-40 w-full border-b border-[var(--doc-border)] bg-[var(--doc-header-bg)] backdrop-blur-md">

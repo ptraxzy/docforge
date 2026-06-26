@@ -85,7 +85,8 @@ async function generateViaAI(serverUrl, projectName, framework, codeFiles, docOp
 export async function buildSite(options = {}) {
   const projectDir = process.cwd();
 
-  console.log(chalk.blue('DocForge - Documentation Website Builder\n'));
+  console.log(chalk.blue('DocForge - Documentation Website Builder'));
+  console.log(chalk.dim.gray('by xputra.dev\n'));
 
   // 1. Detect framework
   console.log(chalk.yellow('Detecting project framework...'));

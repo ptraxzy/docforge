@@ -14,7 +14,8 @@ export async function generate(projectPath, options) {
   let outputDir = options.output || './';
 
   // 1. Initialize project analysis first
-  console.log(chalk.blue('DocForge - AI Documentation Generator\n'));
+  console.log(chalk.blue('DocForge - AI Documentation Generator'));
+  console.log(chalk.dim.gray('by xputra.dev\n'));
   console.log(chalk.yellow('Analyzing project structure...'));
 
   const projectRoot = projectPath || process.cwd();

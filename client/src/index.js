@@ -104,7 +104,8 @@ program
 
 async function showMainMenu() {
   await displayUpdateMessage(program.version());
-  console.log(chalk.bold.blue('DocForge - Interactive Control Panel\n'));
+  console.log(chalk.bold.blue('DocForge - Interactive Control Panel'));
+  console.log(chalk.dim.gray('by xputra.dev\n'));
   
   const response = await prompts({
     type: 'select',

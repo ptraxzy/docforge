@@ -3,7 +3,8 @@ import fs from 'fs-extra';
 import path from 'path';
 
 export async function init() {
-  console.log(chalk.blue('Initializing DocForge\n'));
+  console.log(chalk.blue('Initializing DocForge'));
+  console.log(chalk.dim.gray('by xputra.dev\n'));
 
   const projectDir = process.cwd();
   const docforgeDir = path.join(projectDir, '.docforge');

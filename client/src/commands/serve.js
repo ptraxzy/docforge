@@ -7,7 +7,8 @@ import { fileURLToPath } from 'url';
 export async function serve(options) {
   const port = options.port || process.env.PORT || '8000';
 
-  console.log(chalk.blue('DocForge Server\n'));
+  console.log(chalk.blue('DocForge Server'));
+  console.log(chalk.dim.gray('by xputra.dev\n'));
   console.log(chalk.gray(`   Port:         ${port}\n`));
 
   // Get server path (relative to this file)

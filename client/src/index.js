@@ -9,7 +9,15 @@ import { setServerUrl, getServerUrl } from './utils/config.js';
 import { startUpdateCheck, displayUpdateMessage } from './utils/updateChecker.js';
 import chalk from 'chalk';
 import prompts from 'prompts';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { execSync } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf-8'));
+const VERSION = packageJson.version;
 
 // Start checking for updates in the background immediately
 startUpdateCheck();
@@ -23,7 +31,7 @@ program.hook('preAction', async () => {
 program
   .name('docforge')
   .description('AI-powered documentation generator - open source')
-  .version('0.4.2');
+  .version(VERSION);
 
 // Set server URL
 program

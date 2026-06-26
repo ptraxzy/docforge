@@ -42,7 +42,62 @@ export default function Docs() {
   const [searchResults, setSearchResults] = useState<Array<{ key: string; title: string; snippet: string }>>([]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [activeSection, setActiveSection] = useState<string>('');
+  const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
+  
+  const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>(() => {
+    const keys = Object.keys(DOCS_DATA);
+    const initial: Record<string, boolean> = {};
+    keys.forEach(k => {
+      initial[k] = false;
+    });
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(2) : '';
+    const initialActive = keys.includes(hash) ? hash : (keys[0] || '');
+    if (initialActive) {
+      initial[initialActive] = true;
+    }
+    return initial;
+  });
+
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const articleRef = useRef<HTMLElement>(null);
+
+  // Parse HTML into sections divided by H2 headings
+  const getSections = (htmlStr: string): Array<{ title: string; html: string }> => {
+    if (!htmlStr) return [];
+    const parts = htmlStr.split(/<h2(?=\s|>)/);
+    const result: Array<{ title: string; html: string }> = [];
+    
+    // Check if there is introduction text before the first H2
+    const hasIntro = parts[0] && parts[0].trim().length > 0;
+    if (hasIntro) {
+      result.push({
+        title: 'Overview',
+        html: parts[0]
+      });
+    }
+    
+    for (let i = 1; i < parts.length; i++) {
+      const sectionHtml = '<h2' + parts[i];
+      const match = sectionHtml.match(/<h2[^>]*>(.*?)<\/h2>/);
+      const title = match ? match[1].replace(/<[^>]*>/g, '') : `Section ${i}`;
+      result.push({
+        title: title,
+        html: sectionHtml
+      });
+    }
+    
+    if (result.length === 0) {
+      result.push({
+        title: 'Overview',
+        html: htmlStr
+      });
+    }
+    
+    return result;
+  };
+
+  const activeDoc = DOCS_DATA[activeTab] || { title: '', html: '', toc: [] };
+  const sections = getSections(activeDoc.html);
 
   // Dynamically load Prism.js if not loaded, then highlight
   const highlightCode = () => {
@@ -113,41 +168,32 @@ export default function Docs() {
   // Listen for external hash changes
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.slice(2);
-      if (DOCS_DATA[hash]) {
-        setActiveTab(hash);
+      const fullHash = window.location.hash;
+      const parts = fullHash.slice(2).split('#');
+      const tabKey = parts[0];
+      const sectionId = parts[1];
+
+      if (DOCS_DATA[tabKey]) {
+        setActiveTab(tabKey);
+        setExpandedDocs(prev => ({
+          ...prev,
+          [tabKey]: true
+        }));
+        
+        if (sectionId) {
+          const docSections = getSections(DOCS_DATA[tabKey].html);
+          const sIdx = docSections.findIndex(s => s.html.includes(`id="${sectionId}"`) || s.html.includes(`id='${sectionId}'`));
+          if (sIdx !== -1) {
+            setActiveSectionIdx(sIdx);
+            return;
+          }
+        }
+        setActiveSectionIdx(0);
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
-
-  const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
-  const articleRef = useRef<HTMLElement>(null);
-
-  const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>(() => {
-    const keys = Object.keys(DOCS_DATA);
-    const initial: Record<string, boolean> = {};
-    keys.forEach(k => {
-      initial[k] = false;
-    });
-    const hash = typeof window !== 'undefined' ? window.location.hash.slice(2) : '';
-    const initialActive = keys.includes(hash) ? hash : (keys[0] || '');
-    if (initialActive) {
-      initial[initialActive] = true;
-    }
-    return initial;
-  });
-
-  // Keep expanded state in sync when activeTab changes
-  useEffect(() => {
-    if (activeTab) {
-      setExpandedDocs(prev => ({
-        ...prev,
-        [activeTab]: true
-      }));
-    }
-  }, [activeTab]);
 
   // Scroll to top of article container when page/section changes
   useEffect(() => {
@@ -161,7 +207,6 @@ export default function Docs() {
     if (activeTab) {
       window.location.hash = '/' + activeTab;
       highlightCode();
-      setActiveSectionIdx(0); // Reset section index on tab change
       setTimeout(() => {
         setMobileSidebarOpen(false);
       }, 0);
@@ -177,43 +222,6 @@ export default function Docs() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  const activeDoc = DOCS_DATA[activeTab] || { title: '', html: '', toc: [] };
-
-  // Parse HTML into sections divided by H2 headings
-  const getSections = (htmlStr: string) => {
-    if (!htmlStr) return [];
-    const parts = htmlStr.split(/<h2(?=\s|>)/);
-    const result = [];
-    
-    // Check if there is introduction text before the first H2
-    let hasIntro = parts[0] && parts[0].trim().length > 0;
-    if (hasIntro) {
-      result.push({
-        title: 'Overview',
-        html: parts[0]
-      });
-    }
-    
-    for (let i = 1; i < parts.length; i++) {
-      const sectionHtml = '<h2' + parts[i];
-      const match = sectionHtml.match(/<h2[^>]*>(.*?)<\/h2>/);
-      const title = match ? match[1].replace(/<[^>]*>/g, '') : `Section ${i}`;
-      result.push({
-        title: title,
-        html: sectionHtml
-      });
-    }
-    
-    if (result.length === 0) {
-      result.push({
-        title: 'Overview',
-        html: htmlStr
-      });
-    }
-    
-    return result;
-  };
 
   const sections = getSections(activeDoc.html);
 
@@ -264,14 +272,7 @@ export default function Docs() {
 
   const activeSectionToc = getActiveSectionToc();
 
-  const handleTocClick = (item: any, e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById(item.id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      window.location.hash = '/' + activeTab + '#' + item.id;
-    }
-  };
+
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -570,15 +571,21 @@ export default function Docs() {
                 
                 return (
                   <div key={key} className="space-y-1">
-                    {/* Main Doc button */}
                     <button 
                       onClick={() => {
-                        setActiveTab(key);
-                        setActiveSectionIdx(0);
-                        setExpandedDocs(prev => ({
-                          ...prev,
-                          [key]: !prev[key]
-                        }));
+                        if (activeTab === key) {
+                          setExpandedDocs(prev => ({
+                            ...prev,
+                            [key]: !prev[key]
+                          }));
+                        } else {
+                          setActiveTab(key);
+                          setActiveSectionIdx(0);
+                          setExpandedDocs(prev => ({
+                            ...prev,
+                            [key]: true
+                          }));
+                        }
                       }} 
                       className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm sidebar-btn ${isDocActive ? 'sidebar-btn-active font-semibold' : 'text-[var(--doc-text-muted)]'}`}
                     >
@@ -678,6 +685,10 @@ export default function Docs() {
                   onClick: () => {
                     setActiveTab(prevDocKey);
                     setActiveSectionIdx(prevDocSections.length - 1);
+                    setExpandedDocs(prev => ({
+                      ...prev,
+                      [prevDocKey]: true
+                    }));
                   }
                 };
               }
@@ -699,6 +710,10 @@ export default function Docs() {
                   onClick: () => {
                     setActiveTab(nextDocKey);
                     setActiveSectionIdx(0);
+                    setExpandedDocs(prev => ({
+                      ...prev,
+                      [nextDocKey]: true
+                    }));
                   }
                 };
               }

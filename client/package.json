@@ -1,6 +1,6 @@
 {
   "name": "@ultramaxoo/docforge",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "AI-powered documentation generator - open source",
   "publishConfig": {
     "access": "public"

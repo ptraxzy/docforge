@@ -157,7 +157,7 @@
       
       <!-- Left Sidebar Navigation -->
       <aside :class="{ 'translate-x-0': mobileSidebarOpen, '-translate-x-full': !mobileSidebarOpen }" 
-             class="fixed inset-y-0 left-0 z-30 w-64 transform border-r border-slate-200 bg-white px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-0 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 dark:border-slate-800 dark:bg-slate-950 lg:dark:bg-transparent">
+             class="fixed inset-y-0 left-0 z-30 w-64 transform border-r border-slate-200 bg-white px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-20 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 dark:border-slate-800 dark:bg-slate-950 lg:dark:bg-transparent">
         <nav class="space-y-1">
           <p class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Documentation</p>
           <template x-for="(doc, key) in docs" :key="key">

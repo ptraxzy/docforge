@@ -560,7 +560,7 @@ export default function Docs() {
         <div className="flex flex-col lg:flex-row lg:gap-8">
           
           {/* Left Sidebar */}
-          <aside className={`fixed inset-y-0 left-0 z-30 w-64 transform border-r border-[var(--doc-border)] bg-[var(--doc-card-bg)] px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-0 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <aside className={`fixed inset-y-0 left-0 z-30 w-64 transform border-r border-[var(--doc-border)] bg-[var(--doc-card-bg)] px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-20 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
             <nav className="space-y-1">
               <p className="px-3 text-xs font-bold uppercase tracking-wider text-[var(--doc-text-muted)] mb-2">Documentation</p>
               {Object.entries(DOCS_DATA).map(([key, doc]) => {

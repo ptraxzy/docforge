@@ -1,6 +1,6 @@
 {
   "name": "docforge-project",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "private": true,
   "description": "DocForge root wrapper for easy execution",
   "scripts": {

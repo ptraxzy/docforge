@@ -126,10 +126,22 @@ async function showMainMenu() {
 
   while (true) {
     const response = await prompts({
-      type: 'text',
+      type: 'autocomplete',
       name: 'command',
       message: 'docforge>',
-      validate: input => input.trim().length > 0 ? true : 'Please enter a command (type /help for options)'
+      choices: [
+        { title: `${chalk.cyan('/generate')}    - Generate Documentation (AI)`, value: '/generate' },
+        { title: `${chalk.cyan('/build-site')}  - Build Documentation Site`, value: '/build-site' },
+        { title: `${chalk.cyan('/set-server')}  - Configure Server URL`, value: '/set-server' },
+        { title: `${chalk.cyan('/health')}      - Check Server Health`, value: '/health' },
+        { title: `${chalk.blue('/help')}        - Show Help Menu`, value: '/help' },
+        { title: `${chalk.red('/exit')}         - Exit / Logout`, value: '/exit' },
+        { title: `${chalk.red('/logout')}       - Exit / Logout`, value: '/logout' }
+      ],
+      suggest: (input, choices) => {
+        const match = input.toLowerCase();
+        return Promise.resolve(choices.filter(choice => choice.value.toLowerCase().includes(match)));
+      }
     });
 
     if (response.command === undefined) {

@@ -23,21 +23,9 @@ const DOCS_DATA: Record<string, DocPage> = __DOCS_DATA_PLACEHOLDER__;
 export default function Docs() {
   const [activeTab, setActiveTab] = useState<string>(() => {
     const keys = Object.keys(DOCS_DATA);
-    if (keys.length > 0) {
-      const hash = typeof window !== 'undefined' ? window.location.hash.slice(2) : '';
-      if (keys.includes(hash)) {
-        return hash;
-      }
-      return keys[0];
-    }
-    return '';
+    return keys[0] || '';
   });
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true';
-    }
-    return false;
-  });
+  const [darkMode, setDarkMode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<Array<{ key: string; title: string; snippet: string }>>([]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
@@ -47,13 +35,8 @@ export default function Docs() {
   const [expandedDocs, setExpandedDocs] = useState<Record<string, boolean>>(() => {
     const keys = Object.keys(DOCS_DATA);
     const initial: Record<string, boolean> = {};
-    keys.forEach(k => {
-      initial[k] = false;
-    });
-    const hash = typeof window !== 'undefined' ? window.location.hash.slice(2) : '';
-    const initialActive = keys.includes(hash) ? hash : (keys[0] || '');
-    if (initialActive) {
-      initial[initialActive] = true;
+    if (keys.length > 0) {
+      initial[keys[0]] = true;
     }
     return initial;
   });
@@ -153,9 +136,41 @@ export default function Docs() {
     }, 50);
   };
 
-  // Initialize
+  // Initialize and check window/localStorage on mount to prevent SSR hydration mismatch
   useEffect(() => {
-    // Handle outside click for search
+    const keys = Object.keys(DOCS_DATA);
+    if (keys.length > 0) {
+      const fullHash = typeof window !== 'undefined' ? window.location.hash : '';
+      const parts = fullHash.slice(2).split('#');
+      const hash = parts[0];
+      const sectionId = parts[1];
+
+      let initialActive = keys[0];
+      if (keys.includes(hash)) {
+        initialActive = hash;
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab(initialActive);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExpandedDocs({ [initialActive]: true });
+
+      if (sectionId) {
+        const docSections = getSections(DOCS_DATA[initialActive].html);
+        const sIdx = docSections.findIndex(s => s.html.includes(`id="${sectionId}"`) || s.html.includes(`id='${sectionId}'`));
+        if (sIdx !== -1) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setActiveSectionIdx(sIdx);
+        }
+      }
+    }
+
+    const savedDark = typeof window !== 'undefined' ? localStorage.getItem('darkMode') === 'true' : false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDarkMode(savedDark);
+  }, []);
+
+  // Handle outside click for search
+  useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setSearchResults([]);
@@ -222,8 +237,6 @@ export default function Docs() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
-
-  const sections = getSections(activeDoc.html);
 
   // Scroll Spy logic for active Table of Contents (TOC) link
   useEffect(() => {

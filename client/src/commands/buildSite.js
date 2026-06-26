@@ -84,6 +84,7 @@ async function generateViaAI(serverUrl, projectName, framework, codeFiles, docOp
 }
 
 export async function buildSite(options = {}) {
+  const isInteractive = process.env.DOCFORGE_INTERACTIVE === 'true';
   const projectDir = process.cwd();
 
   console.log(chalk.blue('DocForge - Documentation Website Builder'));
@@ -134,11 +135,13 @@ export async function buildSite(options = {}) {
       codeFiles = await scanCodeFiles(projectDir);
     } catch (e) {
       console.log(chalk.red(`[Error] Failed to scan code files: ${e.message}`));
+      if (isInteractive) return;
       process.exit(1);
     }
 
     if (codeFiles.length === 0) {
       console.log(chalk.red('[Error] No code files found in this project.'));
+      if (isInteractive) return;
       process.exit(1);
     }
 
@@ -272,6 +275,7 @@ export async function buildSite(options = {}) {
     const saved = await confirmAndSaveDocs(generatedDocs, docsDir, refineContext);
     if (!saved) {
       console.log(chalk.yellow('\nSite building aborted because documentation changes were discarded.'));
+      if (isInteractive) return;
       process.exit(0);
     }
   }
@@ -283,6 +287,7 @@ export async function buildSite(options = {}) {
 
   if (docCount === 0) {
     console.log(chalk.red('[Error] No markdown documentation files (.md) found to compile.'));
+    if (isInteractive) return;
     process.exit(1);
   }
   console.log(chalk.green(`[OK] Compiled ${docCount} documents`));
@@ -373,6 +378,7 @@ ${chalk.bold('Static Site Integration:')}
 
   if (!(await fs.pathExists(templatePath))) {
     console.log(chalk.red(`[Error] Template file not found: ${templatePath}`));
+    if (isInteractive) return;
     process.exit(1);
   }
 

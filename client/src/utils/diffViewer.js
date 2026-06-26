@@ -38,6 +38,7 @@ export function printDiff(filename, oldContent, newContent) {
  */
 export async function confirmAndSaveDocs(docsMap, outputDir, refineContext = null) {
   let currentDocs = { ...docsMap };
+  let printSummary = true;
 
   while (true) {
     const fileStatuses = [];
@@ -61,69 +62,90 @@ export async function confirmAndSaveDocs(docsMap, outputDir, refineContext = nul
       }
     }
 
-    // Display summary of changes
-    console.log(chalk.blue('\nAI has generated/updated documentation:'));
-    fileStatuses.forEach(f => {
-      if (f.status === 'new') {
-        console.log(chalk.green(`   [NEW]      ${f.filename}`));
-      } else if (f.status === 'modified') {
-        console.log(chalk.yellow(`   [MODIFIED] ${f.filename}`));
-      } else {
-        console.log(chalk.gray(`   [UNCHANGED] ${f.filename}`));
-      }
-    });
-    console.log();
+    if (printSummary) {
+      console.log(chalk.blue('\nAI has generated/updated documentation:'));
+      fileStatuses.forEach(f => {
+        if (f.status === 'new') {
+          console.log(chalk.green(`   [NEW]      ${f.filename}`));
+        } else if (f.status === 'modified') {
+          console.log(chalk.yellow(`   [MODIFIED] ${f.filename}`));
+        } else {
+          console.log(chalk.gray(`   [UNCHANGED] ${f.filename}`));
+        }
+      });
+      console.log();
+      printSummary = false;
+    }
 
     const response = await prompts({
-      type: 'select',
-      name: 'action',
-      message: 'Choose an action:',
-      choices: [
-        { title: 'Save all changes to disk', value: 'save' },
-        { title: 'Preview differences (Diff)', value: 'diff' },
-        { title: 'Refine documentation (Chat with AI)', value: 'refine' },
-        { title: 'Discard all changes', value: 'discard' }
-      ]
+      type: 'text',
+      name: 'feedback',
+      message: 'Chat with AI to refine, or [y]es to save all, [n]o to discard (type /help for options):',
+      validate: input => input.trim().length > 0 ? true : 'Please enter feedback, a shortcut, or a slash command'
     });
 
-    // If cancelled (Ctrl+C)
-    if (!response.action) {
+    if (response.feedback === undefined) {
       console.log(chalk.yellow('\nChanges discarded.'));
       return false;
     }
 
-    if (response.action === 'save') {
-      await fs.ensureDir(outputDir);
-      
-      for (const [filename, newContent] of Object.entries(currentDocs)) {
-        const outputPath = path.join(outputDir, filename);
-        await fs.writeFile(outputPath, newContent, 'utf-8');
-        console.log(chalk.green(`   [Wrote] ${filename}`));
-      }
-      console.log(chalk.blue(`\nDocumentation successfully saved to: ${outputDir}/\n`));
-      return true;
-    } else if (response.action === 'diff') {
-      if (diffsToPreview.length === 0) {
-        console.log(chalk.gray('No changes to show.\n'));
+    const input = response.feedback.trim();
+    const cmd = input.toLowerCase();
+
+    // Map direct/shortcut choices to slash commands
+    let isCommand = false;
+    let targetCommand = '';
+
+    if (input.startsWith('/')) {
+      isCommand = true;
+      targetCommand = input.split(' ')[0].toLowerCase();
+    } else if (cmd === 'y' || cmd === 'yes') {
+      isCommand = true;
+      targetCommand = '/save';
+    } else if (cmd === 'n' || cmd === 'no') {
+      isCommand = true;
+      targetCommand = '/discard';
+    } else if (cmd === 'd' || cmd === 'diff') {
+      isCommand = true;
+      targetCommand = '/diff';
+    } else if (cmd === 'h' || cmd === 'help') {
+      isCommand = true;
+      targetCommand = '/help';
+    }
+
+    if (isCommand) {
+      if (targetCommand === '/save' || targetCommand === '/s') {
+        await fs.ensureDir(outputDir);
+        for (const [filename, newContent] of Object.entries(currentDocs)) {
+          const outputPath = path.join(outputDir, filename);
+          await fs.writeFile(outputPath, newContent, 'utf-8');
+          console.log(chalk.green(`   [Wrote] ${filename}`));
+        }
+        console.log(chalk.blue(`\nDocumentation successfully saved to: ${outputDir}/\n`));
+        return true;
+      } else if (targetCommand === '/diff' || targetCommand === '/d') {
+        if (diffsToPreview.length === 0) {
+          console.log(chalk.gray('No changes to show.\n'));
+        } else {
+          diffsToPreview.forEach(diffInfo => {
+            printDiff(diffInfo.filename, diffInfo.oldContent, diffInfo.newContent);
+          });
+        }
+      } else if (targetCommand === '/discard' || targetCommand === '/q' || targetCommand === '/exit' || targetCommand === '/quit') {
+        console.log(chalk.yellow('\nChanges discarded.'));
+        return false;
+      } else if (targetCommand === '/help' || targetCommand === '/h') {
+        console.log(chalk.bold.blue('\nAvailable Commands:'));
+        console.log(`  ${chalk.cyan('y, yes, /save')}      - Save all changes to disk and exit`);
+        console.log(`  ${chalk.cyan('n, no, /discard')}    - Discard all changes and exit`);
+        console.log(`  ${chalk.cyan('d, diff, /diff')}     - Preview differences (Unified Diff)`);
+        console.log(`  ${chalk.cyan('h, help, /help')}     - Show this help menu\n`);
       } else {
-        diffsToPreview.forEach(diffInfo => {
-          printDiff(diffInfo.filename, diffInfo.oldContent, diffInfo.newContent);
-        });
+        console.log(chalk.red(`\nUnknown command: ${targetCommand}. Type /help for options.\n`));
       }
-    } else if (response.action === 'refine') {
+    } else {
       if (!refineContext || !refineContext.serverUrl) {
         console.log(chalk.red('\n[Error] Refinement is only available when connected to the AI server.\n'));
-        continue;
-      }
-
-      const feedbackResponse = await prompts({
-        type: 'text',
-        name: 'feedback',
-        message: 'Chat with AI - Enter instructions for refinement:',
-        validate: input => input.trim().length > 0 ? true : 'Instructions cannot be empty'
-      });
-
-      if (!feedbackResponse.feedback) {
         continue;
       }
 
@@ -133,7 +155,7 @@ export async function confirmAndSaveDocs(docsMap, outputDir, refineContext = nul
           project_name: refineContext.projectName,
           files: refineContext.files,
           current_docs: currentDocs,
-          feedback: feedbackResponse.feedback,
+          feedback: input,
           framework: refineContext.framework,
           options: refineContext.options,
         }, {
@@ -147,15 +169,13 @@ export async function confirmAndSaveDocs(docsMap, outputDir, refineContext = nul
         if (res.data && res.data.success) {
           currentDocs = res.data.docs;
           console.log(chalk.green(`\n[Success] Refinement applied! Tokens used: ${res.data.metadata.tokens_used}`));
+          printSummary = true;
         } else {
-          console.log(chalk.red(`\n[Error] Refinement failed: ${res.data.error || 'Unknown error'}`));
+          console.log(chalk.red(`\n[Error] Refinement failed: ${res.data.error || 'Unknown error'}\n`));
         }
       } catch (err) {
-        console.log(chalk.red(`\n[Error] Refinement failed: ${err.message}`));
+        console.log(chalk.red(`\n[Error] Refinement failed: ${err.message}\n`));
       }
-    } else {
-      console.log(chalk.yellow('\nChanges discarded.'));
-      return false;
     }
   }
 }

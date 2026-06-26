@@ -111,63 +111,84 @@ program
   });
 
 async function showMainMenu() {
+  process.env.DOCFORGE_INTERACTIVE = 'true';
   await displayUpdateMessage(program.version());
   console.log(chalk.bold.blue('DocForge - Interactive Control Panel'));
   console.log(chalk.dim.gray('by xputra.dev\n'));
   
-  const response = await prompts({
-    type: 'select',
-    name: 'action',
-    message: 'What would you like to do?',
-    choices: [
-      { title: 'Generate Documentation (AI)', value: 'generate' },
-      { title: 'Build Documentation Site', value: 'buildSite' },
-      { title: 'Configure Server URL', value: 'serverUrl' },
-      { title: 'Check Server Health', value: 'health' },
-      { title: 'Exit', value: 'exit' }
-    ]
-  });
+  // Show available commands initially
+  console.log(chalk.bold.blue('Available Commands:'));
+  console.log(`  ${chalk.cyan('/generate')}    - Generate Documentation (AI)`);
+  console.log(`  ${chalk.cyan('/build-site')}  - Build Documentation Site`);
+  console.log(`  ${chalk.cyan('/set-server')}  - Configure Server URL`);
+  console.log(`  ${chalk.cyan('/health')}      - Check Server Health`);
+  console.log(`  ${chalk.red('/exit, /logout')} - Exit / Logout\n`);
 
-  if (response.action === 'generate') {
-    await generate(process.cwd(), {});
-  } else if (response.action === 'buildSite') {
-    await buildSite({});
-  } else if (response.action === 'serverUrl') {
-    const currentUrl = getServerUrl();
-    console.log(chalk.gray(`\nCurrent Server URL: ${currentUrl}`));
-    const urlResp = await prompts({
+  while (true) {
+    const response = await prompts({
       type: 'text',
-      name: 'url',
-      message: 'Enter new server URL:',
-      initial: currentUrl
+      name: 'command',
+      message: 'docforge>',
+      validate: input => input.trim().length > 0 ? true : 'Please enter a command (type /help for options)'
     });
-    if (urlResp.url) {
-      setServerUrl(urlResp.url);
-      console.log(chalk.green(`Server URL successfully set to: ${urlResp.url}\n`));
-    }
-  } else if (response.action === 'health') {
-    const currentUrl = getServerUrl();
-    console.log(chalk.yellow(`\nChecking connection to ${currentUrl}/health...`));
-    try {
-      const { default: axios } = await import('axios');
-      const res = await axios.get(`${currentUrl}/health`, { timeout: 5000 });
-      if (res.status === 200 && res.data.status === 'healthy') {
-        console.log(chalk.green('[OK] Server is healthy and connected to AI provider!'));
-        console.log(chalk.gray(`   Model in use: ${res.data.ai_provider?.model || 'unknown'}\n`));
-      } else {
-        console.log(chalk.red(`[Error] Server returned unexpected status: ${res.status}\n`));
-      }
-    } catch (e) {
-      console.log(chalk.red(`[Error] Cannot connect to server at ${currentUrl}: ${e.message}\n`));
-    }
-  } else {
-    console.log(chalk.gray('Goodbye!'));
-    await displayUpdateMessage(program.version());
-    process.exit(0);
-  }
 
-  // Display update warning if package update is available on exit
-  await displayUpdateMessage(program.version());
+    if (response.command === undefined) {
+      console.log(chalk.gray('Goodbye!'));
+      process.exit(0);
+    }
+
+    const rawInput = response.command.trim();
+    const cmd = rawInput.toLowerCase();
+
+    if (cmd === '/generate') {
+      await generate(process.cwd(), {});
+      console.log();
+    } else if (cmd === '/build-site') {
+      await buildSite({});
+      console.log();
+    } else if (cmd === '/set-server') {
+      const currentUrl = getServerUrl();
+      console.log(chalk.gray(`\nCurrent Server URL: ${currentUrl}`));
+      const urlResp = await prompts({
+        type: 'text',
+        name: 'url',
+        message: 'Enter new server URL:',
+        initial: currentUrl
+      });
+      if (urlResp.url) {
+        setServerUrl(urlResp.url);
+        console.log(chalk.green(`Server URL successfully set to: ${urlResp.url}\n`));
+      }
+    } else if (cmd === '/health') {
+      const currentUrl = getServerUrl();
+      console.log(chalk.yellow(`\nChecking connection to ${currentUrl}/health...`));
+      try {
+        const { default: axios } = await import('axios');
+        const res = await axios.get(`${currentUrl}/health`, { timeout: 5000 });
+        if (res.status === 200 && res.data.status === 'healthy') {
+          console.log(chalk.green('[OK] Server is healthy and connected to AI provider!'));
+          console.log(chalk.gray(`   Model in use: ${res.data.ai_provider?.model || 'unknown'}\n`));
+        } else {
+          console.log(chalk.red(`[Error] Server returned unexpected status: ${res.status}\n`));
+        }
+      } catch (e) {
+        console.log(chalk.red(`[Error] Cannot connect to server at ${currentUrl}: ${e.message}\n`));
+      }
+    } else if (cmd === '/exit' || cmd === '/logout') {
+      console.log(chalk.gray('Goodbye!'));
+      await displayUpdateMessage(program.version());
+      process.exit(0);
+    } else if (cmd === '/help' || cmd === '/h') {
+      console.log(chalk.bold.blue('\nAvailable Commands:'));
+      console.log(`  ${chalk.cyan('/generate')}    - Generate Documentation (AI)`);
+      console.log(`  ${chalk.cyan('/build-site')}  - Build Documentation Site`);
+      console.log(`  ${chalk.cyan('/set-server')}  - Configure Server URL`);
+      console.log(`  ${chalk.cyan('/health')}      - Check Server Health`);
+      console.log(`  ${chalk.red('/exit, /logout')} - Exit / Logout\n`);
+    } else {
+      console.log(chalk.red(`Unknown command: "${rawInput}". Type /help for options.\n`));
+    }
+  }
 }
 
 if (process.argv.length === 2) {

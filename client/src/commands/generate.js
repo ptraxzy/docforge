@@ -10,6 +10,7 @@ import { detectFramework } from '../utils/detector.js';
 import { generateOfflineDocs } from '../utils/offlineGenerator.js';
 
 export async function generate(projectPath, options) {
+  const isInteractive = process.env.DOCFORGE_INTERACTIVE === 'true';
   const serverUrl = options.server || getServerUrl();
   let outputDir = options.output || './';
 
@@ -33,11 +34,13 @@ export async function generate(projectPath, options) {
     files = await scanCodeFiles(projectRoot, includePatterns, excludePatterns);
   } catch (e) {
     console.log(chalk.red(`Error scanning files: ${e.message}`));
+    if (isInteractive) return;
     process.exit(1);
   }
 
   if (files.length === 0) {
     console.log(chalk.red('No code files found. Make sure you are in a project directory.'));
+    if (isInteractive) return;
     process.exit(1);
   }
 
@@ -85,6 +88,7 @@ export async function generate(projectPath, options) {
     // If cancelled (Ctrl+C) or chosen No
     if (response.confirm === undefined || !response.confirm) {
       console.log(chalk.gray('\nGeneration cancelled.'));
+      if (isInteractive) return;
       process.exit(0);
     }
 
@@ -237,6 +241,7 @@ export async function generate(projectPath, options) {
 
       if (Object.keys(docs).length === 0) {
         console.log(chalk.yellow('No documentation files selected for offline generation.'));
+        if (isInteractive) return;
         process.exit(0);
       }
 
@@ -244,6 +249,7 @@ export async function generate(projectPath, options) {
       await confirmAndSaveDocs(docs, outputDir);
     } catch (offlineErr) {
       console.log(chalk.red(`\n[Error] Offline generation failed: ${offlineErr.message}`));
+      if (isInteractive) return;
       process.exit(1);
     }
   }

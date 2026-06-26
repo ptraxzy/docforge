@@ -6,15 +6,23 @@ import { init } from './commands/init.js';
 import { serve } from './commands/serve.js';
 import { buildSite } from './commands/buildSite.js';
 import { setServerUrl, getServerUrl } from './utils/config.js';
+import { startUpdateCheck, displayUpdateMessage } from './utils/updateChecker.js';
 import chalk from 'chalk';
 import prompts from 'prompts';
 
+// Start checking for updates in the background immediately
+startUpdateCheck();
+
 const program = new Command();
+
+program.hook('postAction', async () => {
+  await displayUpdateMessage(program.version());
+});
 
 program
   .name('docforge')
   .description('AI-powered documentation generator - open source')
-  .version('0.1.7');
+  .version('0.1.8');
 
 // Set server URL
 program
@@ -130,8 +138,12 @@ async function showMainMenu() {
     }
   } else {
     console.log(chalk.gray('Goodbye!'));
+    await displayUpdateMessage(program.version());
     process.exit(0);
   }
+
+  // Display update warning if package update is available on exit
+  await displayUpdateMessage(program.version());
 }
 
 if (process.argv.length === 2) {

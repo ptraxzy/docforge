@@ -1,8 +1,7 @@
 import json
 import re
 import logging
-from typing import Optional
-from models.schemas import GenerateRequest, GenerateOptions, FileInput
+from models.schemas import GenerateRequest, RefineRequest
 
 logger = logging.getLogger("docforge.services.doc_generator")
 
@@ -270,7 +269,52 @@ async def generate_docs_from_code(request: GenerateRequest) -> tuple[dict[str, s
             system_prompt=sys_prompt,
         )
         cleaned_text = clean_markdown_response(generated_text)
-        logger.info(f"Finished generating {filename} ({tokens} tokens)")
+        logger.info(f"Finished generating draft for {filename} ({tokens} tokens)")
+
+        # Quality Control Self-Review Pass
+        logger.info(f"Performing Quality Control self-review for {filename}...")
+        review_sys_prompt = f"""You are DocForge Quality Control Reviewer.
+Your task is to analyze the generated draft for {filename} and make sure it is complete, correct, has NO placeholders (like TODO, [Insert here], etc.), uses correct markdown syntax, and adheres to professional technical documentation standards.
+
+CRITICAL INSTRUCTIONS:
+1. If the draft documentation is already excellent, complete, accurate, and needs no fixes, reply with EXACTLY the text: NO_CHANGE
+2. If there are ANY issues (e.g. placeholders, formatting errors, incomplete sections, or low-quality descriptions), rewrite the documentation to fix them and output the complete, corrected markdown document.
+3. You must output ONLY the raw corrected markdown or the literal word NO_CHANGE. Do NOT include any explanations, apologies, preamble, or markdown code block wrapper (unless the document itself is a code block).
+"""
+
+        review_prompt = f"""Please review the following generated draft for {filename}:
+
+--- DRAFT START ---
+{cleaned_text}
+--- DRAFT END ---
+
+Evaluate it for:
+- Presence of placeholders like "TODO", "[insert here]", "...", or incomplete instructions.
+- Correct markdown format (headings, lists, tables).
+- Professional tone and technical accuracy based on the provided source code context.
+
+If it requires improvements, output the complete, fully updated version. If it is already perfect, reply with exactly: NO_CHANGE
+"""
+        review_response, review_tokens = await ai.generate(
+            prompt=review_prompt,
+            system_prompt=review_sys_prompt,
+        )
+        tokens += review_tokens
+        review_response_cleaned = review_response.strip()
+        
+        if "NO_CHANGE" not in review_response_cleaned:
+            # Clean response and overwrite
+            corrected_text = clean_markdown_response(review_response_cleaned)
+            # Make sure we didn't get empty string or garbage
+            if corrected_text and len(corrected_text) > 10:
+                logger.info(f"Quality Control updated {filename} to fix issues.")
+                cleaned_text = corrected_text
+            else:
+                logger.warning(f"Quality Control returned invalid text for {filename}, keeping original draft.")
+        else:
+            logger.info(f"Quality Control passed for {filename} with no changes required.")
+
+        logger.info(f"Finished generating {filename} (total {tokens} tokens)")
         return filename, cleaned_text, tokens
             
     # Run in parallel
@@ -283,3 +327,87 @@ async def generate_docs_from_code(request: GenerateRequest) -> tuple[dict[str, s
         total_tokens += tokens
         
     return docs, total_tokens
+
+
+async def refine_docs_with_feedback(request: RefineRequest) -> tuple[dict[str, str], int]:
+    """
+    Refine existing documentation files based on user feedback.
+    Returns (updated_docs_dict, tokens_used)
+    """
+    from services.ai_provider import get_ai_provider
+    import asyncio
+    
+    ai = get_ai_provider()
+    updated_docs = {}
+    total_tokens = 0
+    
+    # Build source code context
+    file_list = []
+    code_summary = []
+    for f in request.files:
+        lang = f.language.upper()
+        file_list.append(f"- `{f.path}` ({lang})")
+        content = f.content
+        if len(content) > 3000:
+            content = content[:3000] + f"\n... (truncated, total {len(f.content)} chars)"
+        code_summary.append(f"### File: {f.path}\n\n```{lang}\n{content}\n```")
+    
+    files_section = "\n".join(file_list)
+    code_section = "\n\n".join(code_summary)
+    framework_section = f"\nDetected Framework/Language: {request.framework}\n" if request.framework else ""
+    
+    async def refine_single_doc(filename: str, current_content: str) -> tuple[str, str, int]:
+        logger.info(f"Refining {filename} with feedback: '{request.feedback[:50]}...'")
+        
+        sys_prompt = f"""You are DocForge, an expert technical documentation generator.
+Your task is to refine and update the existing documentation file: {filename} based on the user's feedback.
+
+CRITICAL INSTRUCTIONS:
+1. If the user feedback does NOT require any changes to {filename}, reply with EXACTLY the text: NO_CHANGE
+2. If changes are required, apply the feedback carefully, keeping the rest of the document structure, formatting, and content intact. Output the complete, updated markdown document.
+3. You must output ONLY the raw updated markdown or the literal word NO_CHANGE. Do NOT include any explanations, apologies, preamble, or markdown code block wrappers (unless the document itself is a code block).
+"""
+
+        prompt = f"""Project: {request.project_name}{framework_section}
+
+Source files:
+{files_section}
+
+Below are the source files for context:
+{code_section}
+
+Here is the CURRENT content of {filename}:
+--- CURRENT {filename} START ---
+{current_content}
+--- CURRENT {filename} END ---
+
+User feedback / instruction for modification:
+"{request.feedback}"
+
+Please apply this feedback to update {filename}. If the feedback does not apply to this file or no changes are needed, reply with exactly: NO_CHANGE
+"""
+        generated_text, tokens = await ai.generate(
+            prompt=prompt,
+            system_prompt=sys_prompt,
+        )
+        cleaned_text = clean_markdown_response(generated_text)
+        cleaned_text_stripped = cleaned_text.strip()
+        
+        if "NO_CHANGE" in cleaned_text_stripped and len(cleaned_text_stripped) < 20:
+            logger.info(f"No changes needed for {filename}")
+            return filename, current_content, tokens
+        else:
+            logger.info(f"Applied refinement changes to {filename}")
+            return filename, cleaned_text, tokens
+            
+    # Run refinement for all files in parallel
+    results = await asyncio.gather(*(
+        refine_single_doc(filename, content)
+        for filename, content in request.current_docs.items()
+    ))
+    
+    for filename, content, tokens in results:
+        updated_docs[filename] = content
+        total_tokens += tokens
+        
+    return updated_docs, total_tokens

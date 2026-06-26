@@ -85,6 +85,15 @@ class RepoDownloadRequest(BaseModel):
         return v
 
 
+class RefineRequest(BaseModel):
+    project_name: str = Field(..., description="Project name", max_length=200)
+    files: list[FileInput] = Field(..., description="Source code files")
+    current_docs: dict[str, str] = Field(..., description="Current generated docs to refine")
+    feedback: str = Field(..., description="User feedback/instructions for modification")
+    framework: Optional[str] = Field(default=None, description="Detected framework")
+    options: Optional[GenerateOptions] = Field(default=None, description="Generation options")
+
+
 class GenerateMetadata(BaseModel):
     files_processed: int
     tokens_used: int

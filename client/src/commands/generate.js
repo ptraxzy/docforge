@@ -200,7 +200,18 @@ export async function generate(projectPath, options) {
     console.log(chalk.gray(`   Tokens used: ${metadata.tokens_used}\n`));
 
     // Write docs to output directory with review confirmation
-    await confirmAndSaveDocs(docs, outputDir);
+    const refineContext = {
+      serverUrl,
+      projectName,
+      files: files.map(f => ({
+        path: f.path,
+        content: f.content,
+        language: f.language,
+      })),
+      framework,
+      options: docOptions,
+    };
+    await confirmAndSaveDocs(docs, outputDir, refineContext);
 
   } catch (error) {
     console.log(chalk.yellow(`\n[Info] AI server offline or returned an error: ${error.message}`));

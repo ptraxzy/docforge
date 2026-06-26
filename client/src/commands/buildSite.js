@@ -7,6 +7,7 @@ import { compileDocs } from '../utils/compiler.js';
 import { scanCodeFiles, getProjectName } from '../utils/fileScanner.js';
 import { getServerUrl } from '../utils/config.js';
 import { generateOfflineDocs } from '../utils/offlineGenerator.js';
+import { confirmAndSaveDocs } from '../utils/diffViewer.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -247,14 +248,32 @@ export async function buildSite(options = {}) {
       console.log(chalk.green(`[OK] Offline generated ${Object.keys(generatedDocs).length} documents`));
     }
 
-    // Save generated docs to docs directory
-    await fs.ensureDir(docsDir);
-    for (const [filename, content] of Object.entries(generatedDocs)) {
-      const filePath = path.join(docsDir, filename);
-      await fs.writeFile(filePath, content, 'utf-8');
-      console.log(chalk.gray(`   [Saved] ${filename}`));
+    // Write docs to output directory with review confirmation / refinement chat loop
+    const refineContext = serverAvailable ? {
+      serverUrl,
+      projectName,
+      files: codeFiles.map(f => ({
+        path: f.path,
+        content: f.content,
+        language: f.language,
+      })),
+      framework,
+      options: {
+        include_readme: false,
+        include_api: false,
+        include_architecture: false,
+        include_changelog: false,
+        include_introduction: true,
+        include_features: true,
+        include_configuration: true,
+      },
+    } : null;
+
+    const saved = await confirmAndSaveDocs(generatedDocs, docsDir, refineContext);
+    if (!saved) {
+      console.log(chalk.yellow('\nSite building aborted because documentation changes were discarded.'));
+      process.exit(0);
     }
-    console.log('');
   }
 
   // 4. Compile docs database

@@ -27,7 +27,7 @@ services:
   # Remove this service if using a cloud AI provider (OpenAI, OpenRouter, etc.)
   # and update AI_BASE_URL accordingly.
   ollama:
-    image: ollama/ollama:latest
+    image: ollama/ollama:latest   
     ports:
       - "11434:11434"
     volumes:

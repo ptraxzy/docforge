@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import path from 'path';
 
 export async function init() {
-  console.log(chalk.blue('🚀 Initializing DocForge\n'));
+  console.log(chalk.blue('Initializing DocForge\n'));
 
   const projectDir = process.cwd();
   const docforgeDir = path.join(projectDir, '.docforge');
@@ -42,7 +42,7 @@ Edit \`.docforge/config.json\` to customize documentation generation.
 
   await fs.writeFile(path.join(docsDir, 'README.md'), readmeContent);
 
-  console.log(chalk.green('✅ DocForge initialized!\n'));
+  console.log(chalk.green('[Success] DocForge initialized!\n'));
   console.log(chalk.blue('Created:'));
   console.log(chalk.gray('   .docforge/config.json'));
   console.log(chalk.gray('   docs/README.md\n'));

@@ -5,6 +5,8 @@ import fs from 'fs-extra';
 import prompts from 'prompts';
 import { getServerUrl } from '../utils/config.js';
 import { scanCodeFiles, getProjectName } from '../utils/fileScanner.js';
+import { confirmAndSaveDocs } from '../utils/diffViewer.js';
+import { detectFramework } from '../utils/detector.js';
 
 export async function generate(projectPath, options) {
   const serverUrl = options.server || getServerUrl();
@@ -23,7 +25,7 @@ export async function generate(projectPath, options) {
   const hasFlags = process.argv.slice(2).some(arg => arg.startsWith('-'));
 
   if (!hasFlags) {
-    console.log(chalk.blue('📄 DocForge - Interactive Document Generator\n'));
+    console.log(chalk.blue('DocForge - Interactive Document Generator\n'));
     
     const questions = [
       {
@@ -68,14 +70,18 @@ export async function generate(projectPath, options) {
     console.log(); // Blank line for clean spacing
   } else {
     // Non-interactive mode (using CLI flags)
-    console.log(chalk.blue('📄 DocForge - AI Documentation Generator\n'));
+    console.log(chalk.blue('DocForge - AI Documentation Generator\n'));
     console.log(chalk.gray(`Project: ${projectPath || '.'}`));
     console.log(chalk.gray(`Server:  ${serverUrl}`));
     console.log(chalk.gray(`Output:  ${outputDir}\n`));
   }
 
+  // Scan for framework
+  const frameworkInfo = await detectFramework(projectPath || process.cwd());
+  const framework = frameworkInfo.type;
+
   // Scan for code files
-  console.log(chalk.yellow('🔍 Scanning code files...'));
+  console.log(chalk.yellow('Scanning code files...'));
   
   const includePatterns = options.include || null;
   const excludePatterns = options.exclude || null;
@@ -134,10 +140,11 @@ export async function generate(projectPath, options) {
       language: f.language,
     })),
     options: docOptions,
+    framework: framework,
   };
 
   // Send to server
-  console.log(chalk.yellow('🤖 Generating documentation with AI...\n'));
+  console.log(chalk.yellow('Generating documentation with AI...\n'));
 
   try {
     const response = await axios.post(`${serverUrl}/generate`, payload, {
@@ -150,32 +157,24 @@ export async function generate(projectPath, options) {
 
     const { docs, metadata } = response.data;
 
-    console.log(chalk.green(`✅ Generated ${Object.keys(docs).length} documentation files\n`));
+    console.log(chalk.green(`[Success] Generated ${Object.keys(docs).length} documentation files\n`));
     console.log(chalk.gray(`   Files processed: ${metadata.files_processed}`));
     console.log(chalk.gray(`   Tokens used: ${metadata.tokens_used}\n`));
 
-    // Write docs to output directory
-    await fs.ensureDir(outputDir);
-
-    for (const [filename, content] of Object.entries(docs)) {
-      const outputPath = path.join(outputDir, filename);
-      await fs.writeFile(outputPath, content, 'utf-8');
-      console.log(chalk.green(`   ✓ ${filename}`));
-    }
-
-    console.log(chalk.blue(`\n📚 Documentation saved to: ${outputDir}/\n`));
+    // Write docs to output directory with review confirmation
+    await confirmAndSaveDocs(docs, outputDir);
 
   } catch (error) {
     if (error.code === 'ECONNREFUSED') {
-      console.log(chalk.red(`\n❌ Cannot connect to DocForge server at ${serverUrl}`));
+      console.log(chalk.red(`\n[Error] Cannot connect to DocForge server at ${serverUrl}`));
       console.log(chalk.yellow('\nMake sure the server is running:'));
       console.log(chalk.gray('   docforge serve'));
       console.log(chalk.gray('   # or set a different server:'));
       console.log(chalk.gray('   docforge set-server <url>\n'));
     } else if (error.response) {
-      console.log(chalk.red(`\n❌ Server error: ${error.response.data?.detail || error.message}`));
+      console.log(chalk.red(`\n[Error] Server error: ${error.response.data?.detail || error.message}`));
     } else {
-      console.log(chalk.red(`\n❌ Error: ${error.message}`));
+      console.log(chalk.red(`\n[Error] Error: ${error.message}`));
     }
     process.exit(1);
   }

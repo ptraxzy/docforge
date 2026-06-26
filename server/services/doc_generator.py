@@ -1,7 +1,10 @@
 import json
 import re
+import logging
 from typing import Optional
 from models.schemas import GenerateRequest, GenerateOptions, FileInput
+
+logger = logging.getLogger("docforge.services.doc_generator")
 
 
 SYSTEM_PROMPT = """You are DocForge, an expert technical documentation generator. You analyze source code and generate comprehensive, well-structured documentation.
@@ -113,20 +116,137 @@ def parse_ai_response(response_text: str) -> dict[str, str]:
     return {"README.md": cleaned}
 
 
+def get_system_prompt(filename: str) -> str:
+    guidelines = ""
+    if filename == "README.md":
+        guidelines = "The README.md should contain: Project name, Description/Overview, Features, Installation instructions, Quick Start/Usage guide, and Contribution guidelines."
+    elif filename == "API.md":
+        guidelines = "The API.md should contain detailed reference documentation for all public endpoints, classes, methods, functions, their parameters (with types), and return values found in the source code."
+    elif filename == "ARCHITECTURE.md":
+        guidelines = "The ARCHITECTURE.md should outline the high-level design of the project, codebase directory structure, key component modules, design patterns used, and the flow of data between components."
+    elif filename == "CHANGELOG.md":
+        guidelines = "The CHANGELOG.md should list a history of changes or releases, structured chronologically using the provided git commits context. Group changes by type (e.g., Added, Changed, Fixed) where appropriate."
+
+    return f"""You are DocForge, an expert technical documentation generator. You analyze source code and generate comprehensive, well-structured documentation.
+
+You output ONLY the raw, complete markdown content of the requested document: {filename}.
+Do NOT output any explanations, apologies, or preamble. Do NOT wrap the output in JSON or anything else. Output ONLY the raw markdown document content.
+
+Do NOT use emojis anywhere in the documentation. Keep the tone clean, professional, and technical to avoid AI-generated aesthetic tropes.
+
+Specific guidelines for {filename}:
+{guidelines}
+"""
+
+
+def build_prompt_for_file(request: GenerateRequest, filename: str) -> str:
+    """Build the prompt for AI to generate a specific documentation file"""
+    
+    # Build file listing
+    file_list = []
+    code_summary = []
+    
+    for i, f in enumerate(request.files):
+        lang = f.language.upper()
+        file_list.append(f"- `{f.path}` ({lang})")
+        
+        # Truncate very long files
+        content = f.content
+        if len(content) > 3000:
+            content = content[:3000] + f"\n... (truncated, total {len(f.content)} chars)"
+        
+        code_summary.append(f"### File: {f.path}\n\n```{lang}\n{content}\n```")
+    
+    files_section = "\n".join(file_list)
+    code_section = "\n\n".join(code_summary)
+    
+    # Git context
+    git_info = ""
+    if request.git_context:
+        commits = request.git_context.recent_commits
+        if commits:
+            git_info = f"\nRecent commits:\n" + "\n".join(f"- {c}" for c in commits[:10])
+    
+    framework_section = f"\nDetected Framework/Language: {request.framework}\n" if request.framework else ""
+
+    prompt = f"""Project: {request.project_name}{framework_section}
+
+Source files ({len(request.files)} files):
+{files_section}
+{git_info}
+
+Please generate the documentation file: {filename}
+
+Below are the source files to analyze:
+
+{code_section}
+
+Please write and return the complete {filename} content. Remember to output ONLY the raw markdown content of {filename}. No JSON wrapping, no preamble.
+"""
+    return prompt
+
+
+def clean_markdown_response(text: str) -> str:
+    cleaned = text.strip()
+    # Check if the whole response is wrapped in a code block
+    if cleaned.startswith("```"):
+        # Split by first newline
+        first_newline = cleaned.find("\n")
+        if first_newline != -1:
+            # Check if there is a closing fence
+            if cleaned.endswith("```"):
+                # Extract content between the first newline and the closing ```
+                inner = cleaned[first_newline+1:-3].strip()
+                return inner
+    return cleaned
+
+
 async def generate_docs_from_code(request: GenerateRequest) -> tuple[dict[str, str], int]:
     """
     Generate documentation from code files.
     Returns (docs_dict, tokens_used)
     """
     from services.ai_provider import get_ai_provider
+    import asyncio
     
-    prompt = build_prompt(request)
     ai = get_ai_provider()
     
-    generated_text, tokens_used = await ai.generate(
-        prompt=prompt,
-        system_prompt=SYSTEM_PROMPT,
-    )
-    docs = parse_ai_response(generated_text)
+    # Identify which files need to be generated
+    options = request.options
+    targets = []
+    if options.include_readme:
+        targets.append("README.md")
+    if options.include_api:
+        targets.append("API.md")
+    if options.include_architecture:
+        targets.append("ARCHITECTURE.md")
+    if options.include_changelog:
+        targets.append("CHANGELOG.md")
+        
+    if not targets:
+        return {}, 0
+        
+    # Helper to generate a single document
+    async def generate_single_doc(filename: str) -> tuple[str, str, int]:
+        logger.info(f"Generating {filename} for project {request.project_name}...")
+        prompt = build_prompt_for_file(request, filename)
+        sys_prompt = get_system_prompt(filename)
+        
+        generated_text, tokens = await ai.generate(
+            prompt=prompt,
+            system_prompt=sys_prompt,
+        )
+        cleaned_text = clean_markdown_response(generated_text)
+        logger.info(f"Finished generating {filename} ({tokens} tokens)")
+        return filename, cleaned_text, tokens
+            
+    # Run in parallel
+    results = await asyncio.gather(*(generate_single_doc(t) for t in targets))
     
-    return docs, tokens_used
+    docs = {}
+    total_tokens = 0
+    for filename, content, tokens in results:
+        docs[filename] = content
+        total_tokens += tokens
+        
+    return docs, total_tokens

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en" x-data="docsApp()" :class="{ 'dark': darkMode }">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Documentation</title>
+  
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Prism.js Dracula Theme -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+  
+  <!-- Custom styles for typography & scrollbars -->
+  <style>
+    /* Premium thin scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    /* Code block container tweaks */
+    pre[class*="language-"] {
+      border-radius: 0.75rem;
+      margin: 1.5rem 0;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans transition-colors duration-200 antialiased dark:bg-slate-950 dark:text-slate-100">
+
+  <!-- Navbar -->
+  <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
+    <div class="mx-auto flex h-16 max-w-8xl items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3">
+        <!-- Mobile Sidebar Toggle -->
+        <button @click="mobileSidebarOpen = !mobileSidebarOpen" class="rounded-lg p-2 hover:bg-slate-100 lg:hidden dark:hover:bg-slate-800" aria-label="Toggle menu">
+          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span class="font-display text-xl font-bold tracking-tight text-primary-600 dark:text-primary-400">📄 DocForge Docs</span>
+      </div>
+
+      <!-- Header Operations -->
+      <div class="flex items-center gap-4">
+        <!-- Fuzzy Search Input -->
+        <div class="relative w-48 sm:w-64">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input type="text" 
+                 x-model="searchQuery" 
+                 @input="search()" 
+                 placeholder="Search documents..." 
+                 class="w-full rounded-lg border border-slate-200 bg-slate-100 py-1.5 pl-9 pr-4 text-sm outline-none transition-all placeholder:text-slate-400 hover:bg-slate-200/70 focus:border-primary-500 focus:bg-white dark:border-slate-800 dark:bg-slate-900 dark:placeholder:text-slate-500 dark:hover:bg-slate-800/80 dark:focus:bg-slate-950">
+          
+          <!-- Search Dropdown Results -->
+          <div x-show="searchResults.length > 0" 
+               @click.outside="searchResults = []" 
+               class="absolute right-0 mt-2 w-72 origin-top-right rounded-xl border border-slate-200 bg-white p-2 shadow-xl ring-1 ring-black/5 dark:border-slate-800 dark:bg-slate-900" 
+               x-cloak>
+            <template x-for="result in searchResults" :key="result.key">
+              <button @click="selectSearchResult(result.key)" class="flex w-full flex-col gap-1 rounded-lg p-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="text-sm font-semibold text-primary-600 dark:text-primary-400" x-text="result.title"></span>
+                <span class="text-xs text-slate-500 dark:text-slate-400" x-text="result.snippet"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <!-- Dark Mode Toggle -->
+        <button @click="darkMode = !darkMode" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="Toggle dark mode">
+          <!-- Light Mode Icon (Sun) -->
+          <svg x-show="darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-cloak>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707-.707m12.728 0l-.707.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+          </svg>
+          <!-- Dark Mode Icon (Moon) -->
+          <svg x-show="!darkMode" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar / Content container -->
+  <div class="mx-auto max-w-8xl px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:gap-8">
+      
+      <!-- Left Sidebar Navigation -->
+      <aside :class="{ 'translate-x-0': mobileSidebarOpen, '-translate-x-full': !mobileSidebarOpen }" 
+             class="fixed inset-y-0 left-0 z-30 w-64 transform border-r border-slate-200 bg-white px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-0 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 dark:border-slate-800 dark:bg-slate-950 lg:dark:bg-transparent">
+        <nav class="space-y-1">
+          <p class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Documentation</p>
+          <template x-for="(doc, key) in docs" :key="key">
+            <button @click="activeTab = key" 
+                    :class="activeTab === key ? 'bg-primary-50 font-medium text-primary-600 dark:bg-primary-950/40 dark:text-primary-400' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'"
+                    class="flex w-full items-center rounded-lg px-3 py-2 text-sm">
+              <svg class="mr-3 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span x-text="doc.title"></span>
+            </button>
+          </template>
+        </nav>
+      </aside>
+
+      <!-- Center Main Content -->
+      <main class="min-w-0 flex-1 py-8 lg:py-12">
+        <article class="prose max-w-3xl dark:prose-invert prose-slate prose-headings:font-display prose-headings:font-bold prose-h1:text-4xl prose-h2:text-2xl prose-a:text-primary-600 dark:prose-a:text-primary-400 hover:prose-a:underline prose-pre:bg-slate-900 prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-img:rounded-xl">
+          <!-- Live HTML Injected by Alpine -->
+          <div x-html="activeDoc.html"></div>
+        </article>
+      </main>
+
+      <!-- Right Sidebar Table of Contents (TOC) -->
+      <aside class="hidden w-64 shrink-0 lg:block lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] py-12">
+        <div x-show="activeDoc.toc && activeDoc.toc.length > 0">
+          <h3 class="font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">On This Page</h3>
+          <ul class="space-y-2 border-l border-slate-200 dark:border-slate-800">
+            <template x-for="item in activeDoc.toc" :key="item.id">
+              <li :class="item.level === 3 ? 'pl-6' : 'pl-4'">
+                <a :href="'#' + item.id" 
+                   class="block text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+                   x-text="item.text"></a>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Prism Syntax Highlighting -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+  <!-- Docs Database Injection Placeholder -->
+  <script>
+    // Embedded docs database
+    window.DOCS_DATA = {
+  "api": {
+    "title": "DocForge API Documentation",
+    "html": "<h1>DocForge API Documentation</h1>\n<p>DocForge is an AI-powered documentation generator consisting of a CLI client and a REST API server. This document covers both the client-side CLI commands and the server-side API endpoints.</p>\n<hr>\n<h2>Table of Contents</h2>\n<ol>\n<li><a href=\"#cli-commands\">CLI Commands</a></li>\n<li><a href=\"#rest-api-endpoints\">REST API Endpoints</a></li>\n<li><a href=\"#configuration\">Configuration</a></li>\n<li><a href=\"#data-models\">Data Models</a></li>\n<li><a href=\"#services\">Services</a></li>\n</ol>\n<hr>\n<h2>CLI Commands</h2>\n<p>The DocForge CLI is built with Commander.js and provides the following commands.</p>\n<h3>Global Options</h3>\n<table>\n<thead>\n<tr>\n<th>Option</th>\n<th>Description</th>\n<th>Default</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>-V, --version</code></td>\n<td>Output the version number</td>\n<td>-</td>\n</tr>\n<tr>\n<td><code>-h, --help</code></td>\n<td>Output usage information</td>\n<td>-</td>\n</tr>\n</tbody></table>\n<hr>\n<h3><code>docforge set-server &lt;url&gt;</code></h3>\n<p>Set the DocForge server URL for future commands.</p>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>url</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>The server URL to set</td>\n</tr>\n</tbody></table>\n<p><strong>Example:</strong></p>\n<pre><code class=\"language-bash\">docforge set-server https://docforge.example.com\n</code></pre>\n<hr>\n<h3><code>docforge get-server</code></h3>\n<p>Display the currently configured server URL.</p>\n<p><strong>Example:</strong></p>\n<pre><code class=\"language-bash\">docforge get-server\n# Output: Server URL: https://docforge.example.com\n</code></pre>\n<hr>\n<h3><code>docforge generate [path&gt;</code></h3>\n<p>Generate documentation for a project.</p>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>path</code></td>\n<td>string</td>\n<td>No</td>\n<td>Project directory path (defaults to current directory)</td>\n</tr>\n</tbody></table>\n<p><strong>Options:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Option</th>\n<th>Alias</th>\n<th>Type</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>-o, --output &lt;dir&gt;</code></td>\n<td>output</td>\n<td>string</td>\n<td><code>./docs</code></td>\n<td>Output directory for generated docs</td>\n</tr>\n<tr>\n<td><code>-s, --server &lt;url&gt;</code></td>\n<td>server</td>\n<td>string</td>\n<td>-</td>\n<td>Server URL override</td>\n</tr>\n<tr>\n<td><code>-i, --include &lt;patterns...&gt;</code></td>\n<td>include</td>\n<td>string[]</td>\n<td>-</td>\n<td>File patterns to include</td>\n</tr>\n<tr>\n<td><code>-e, --exclude &lt;patterns...&gt;</code></td>\n<td>exclude</td>\n<td>string[]</td>\n<td>-</td>\n<td>File patterns to exclude</td>\n</tr>\n<tr>\n<td><code>--readme</code></td>\n<td>-</td>\n<td>boolean</td>\n<td><code>true</code></td>\n<td>Generate README.md</td>\n</tr>\n<tr>\n<td><code>--no-readme</code></td>\n<td>-</td>\n<td>boolean</td>\n<td>-</td>\n<td>Do not generate README.md</td>\n</tr>\n<tr>\n<td><code>--api</code></td>\n<td>-</td>\n<td>boolean</td>\n<td><code>true</code></td>\n<td>Generate API.md</td>\n</tr>\n<tr>\n<td><code>--no-api</code></td>\n<td>-</td>\n<td>boolean</td>\n<td>-</td>\n<td>Do not generate API.md</td>\n</tr>\n<tr>\n<td><code>--architecture</code></td>\n<td>-</td>\n<td>boolean</td>\n<td><code>false</code></td>\n<td>Generate ARCHITECTURE.md</td>\n</tr>\n<tr>\n<td><code>--no-architecture</code></td>\n<td>-</td>\n<td>boolean</td>\n<td>-</td>\n<td>Do not generate ARCHITECTURE.md</td>\n</tr>\n<tr>\n<td><code>--changelog</code></td>\n<td>-</td>\n<td>boolean</td>\n<td><code>false</code></td>\n<td>Generate CHANGELOG.md</td>\n</tr>\n<tr>\n<td><code>--no-changelog</code></td>\n<td>-</td>\n<td>boolean</td>\n<td>-</td>\n<td>Do not generate CHANGELOG.md</td>\n</tr>\n</tbody></table>\n<p><strong>Example:</strong></p>\n<pre><code class=\"language-bash\"># Interactive mode\ndocforge generate\n\n# Non-interactive with options\ndocforge generate ./my-project -o ./documentation --readme --api\n\n# With specific patterns\ndocforge generate -i &quot;**/*.js&quot; &quot;**/*.ts&quot; -e &quot;**/node_modules/**&quot; &quot;**/*.test.js&quot;\n</code></pre>\n<hr>\n<h3><code>docforge init</code></h3>\n<p>Initialize DocForge in the current project directory. Creates:</p>\n<ul>\n<li><code>.docforge/config.json</code> - Configuration file</li>\n<li><code>docs/README.md</code> - Placeholder README</li>\n</ul>\n<p><strong>Example:</strong></p>\n<pre><code class=\"language-bash\">docforge init\n</code></pre>\n<hr>\n<h3><code>docforge serve</code></h3>\n<p>Start the DocForge server locally.</p>\n<p><strong>Options:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Option</th>\n<th>Alias</th>\n<th>Type</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>-p, --port &lt;port&gt;</code></td>\n<td>port</td>\n<td>string</td>\n<td><code>8000</code></td>\n<td>Port to listen on</td>\n</tr>\n<tr>\n<td><code>--ai-url &lt;url&gt;</code></td>\n<td>aiUrl</td>\n<td>string</td>\n<td><code>http://localhost:11434/v1</code></td>\n<td>AI provider base URL (OpenAI-compatible)</td>\n</tr>\n<tr>\n<td><code>--ai-model &lt;model&gt;</code></td>\n<td>aiModel</td>\n<td>string</td>\n<td><code>llama3</code></td>\n<td>AI model name</td>\n</tr>\n<tr>\n<td><code>--ai-key &lt;key&gt;</code></td>\n<td>aiKey</td>\n<td>string</td>\n<td>-</td>\n<td>AI provider API key (optional for self-hosted)</td>\n</tr>\n</tbody></table>\n<p><strong>Example:</strong></p>\n<pre><code class=\"language-bash\">docforge serve -p 8080 --ai-url http://localhost:11434/v1 --ai-model llama3\n</code></pre>\n<hr>\n<h2>REST API Endpoints</h2>\n<p>The DocForge server exposes a FastAPI-based REST API.</p>\n<p><strong>Base URL:</strong> <code>http://{host}:{port}</code></p>\n<p><strong>Default:</strong> <code>http://0.0.0.0:8000</code></p>\n<hr>\n<h3><code>GET /health</code></h3>\n<p>Health check endpoint with AI provider status.</p>\n<p><strong>Response:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;status&quot;: &quot;healthy&quot;,\n  &quot;service&quot;: &quot;docforge-server&quot;,\n  &quot;timestamp&quot;: &quot;2024-01-15T10:30:00.000Z&quot;,\n  &quot;ai_provider&quot;: {\n    &quot;status&quot;: &quot;connected&quot;,\n    &quot;base_url&quot;: &quot;http://localhost:11434/v1&quot;,\n    &quot;model&quot;: &quot;llama3&quot;\n  }\n}\n</code></pre>\n<p><strong>Response Fields:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>status</code></td>\n<td>string</td>\n<td>Overall health status (<code>healthy</code>, <code>unhealthy</code>)</td>\n</tr>\n<tr>\n<td><code>service</code></td>\n<td>string</td>\n<td>Service identifier</td>\n</tr>\n<tr>\n<td><code>timestamp</code></td>\n<td>string</td>\n<td>ISO 8601 timestamp</td>\n</tr>\n<tr>\n<td><code>ai_provider</code></td>\n<td>object</td>\n<td>AI provider connection status</td>\n</tr>\n<tr>\n<td><code>ai_provider.status</code></td>\n<td>string</td>\n<td>AI provider status (<code>connected</code>, <code>disconnected</code>)</td>\n</tr>\n<tr>\n<td><code>ai_provider.base_url</code></td>\n<td>string</td>\n<td>AI provider base URL</td>\n</tr>\n<tr>\n<td><code>ai_provider.model</code></td>\n<td>string</td>\n<td>AI model name</td>\n</tr>\n</tbody></table>\n<hr>\n<h3><code>POST /generate</code></h3>\n<p>Generate documentation from source code files.</p>\n<p><strong>Request Body:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;project_name&quot;: &quot;my-project&quot;,\n  &quot;files&quot;: [\n    {\n      &quot;path&quot;: &quot;src/index.js&quot;,\n      &quot;content&quot;: &quot;const app = express();&quot;,\n      &quot;language&quot;: &quot;javascript&quot;\n    }\n  ],\n  &quot;git_context&quot;: {\n    &quot;recent_commits&quot;: [&quot;feat: add endpoint&quot;, &quot;fix: bug&quot;],\n    &quot;branch&quot;: &quot;main&quot;\n  },\n  &quot;options&quot;: {\n    &quot;include_readme&quot;: true,\n    &quot;include_api&quot;: true,\n    &quot;include_architecture&quot;: false,\n    &quot;include_changelog&quot;: false\n  }\n}\n</code></pre>\n<p><strong>Request Fields:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>project_name</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Project name (max 200 characters)</td>\n</tr>\n<tr>\n<td><code>files</code></td>\n<td>array[FileInput]</td>\n<td>Yes</td>\n<td>Source code files (minimum 1, maximum 100)</td>\n</tr>\n<tr>\n<td><code>git_context</code></td>\n<td>GitContext</td>\n<td>No</td>\n<td>Git repository context</td>\n</tr>\n<tr>\n<td><code>options</code></td>\n<td>GenerateOptions</td>\n<td>No</td>\n<td>Documentation generation options</td>\n</tr>\n</tbody></table>\n<p><strong>Response (200 OK):</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;success&quot;: true,\n  &quot;docs&quot;: {\n    &quot;README.md&quot;: &quot;# My Project\\n\\nOverview...&quot;,\n    &quot;API.md&quot;: &quot;## Functions\\n\\n...&quot;\n  },\n  &quot;metadata&quot;: {\n    &quot;files_processed&quot;: 5,\n    &quot;tokens_used&quot;: 1500,\n    &quot;generated_at&quot;: &quot;2024-01-15T10:30:00.000Z&quot;\n  }\n}\n</code></pre>\n<p><strong>Response Fields:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>success</code></td>\n<td>boolean</td>\n<td>Whether generation succeeded</td>\n</tr>\n<tr>\n<td><code>docs</code></td>\n<td>object</td>\n<td>Generated documentation files (filename -&gt; content mapping)</td>\n</tr>\n<tr>\n<td><code>metadata</code></td>\n<td>object</td>\n<td>Generation metadata</td>\n</tr>\n<tr>\n<td><code>metadata.files_processed</code></td>\n<td>integer</td>\n<td>Number of files processed</td>\n</tr>\n<tr>\n<td><code>metadata.tokens_used</code></td>\n<td>integer</td>\n<td>Total tokens consumed</td>\n</tr>\n<tr>\n<td><code>metadata.generated_at</code></td>\n<td>string</td>\n<td>ISO 8601 timestamp</td>\n</tr>\n</tbody></table>\n<p><strong>Error Responses:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Status</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td>400</td>\n<td>Invalid request (validation error, path traversal attempt)</td>\n</tr>\n<tr>\n<td>429</td>\n<td>Rate limit exceeded</td>\n</tr>\n<tr>\n<td>500</td>\n<td>Server error during generation</td>\n</tr>\n</tbody></table>\n<hr>\n<h3><code>POST /generate-from-repo</code></h3>\n<p>Download a git repository and generate documentation from its code.</p>\n<p><strong>Request Body:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;repo_url&quot;: &quot;https://github.com/user/repo.git&quot;,\n  &quot;branch&quot;: &quot;main&quot;,\n  &quot;include_patterns&quot;: [&quot;*.js&quot;, &quot;*.ts&quot;, &quot;*.py&quot;],\n  &quot;exclude_patterns&quot;: [&quot;node_modules/**&quot;, &quot;**/*.test.js&quot;],\n  &quot;options&quot;: {\n    &quot;include_readme&quot;: true,\n    &quot;include_api&quot;: true,\n    &quot;include_architecture&quot;: false,\n    &quot;include_changelog&quot;: false\n  }\n}\n</code></pre>\n<p><strong>Request Fields:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_url</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>Git repository URL (must start with <code>https://</code>, <code>http://</code>, or <code>git@</code>)</td>\n</tr>\n<tr>\n<td><code>branch</code></td>\n<td>string</td>\n<td>No</td>\n<td><code>main</code></td>\n<td>Branch to clone</td>\n</tr>\n<tr>\n<td><code>include_patterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>See below</td>\n<td>File patterns to include</td>\n</tr>\n<tr>\n<td><code>exclude_patterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>See below</td>\n<td>File patterns to exclude</td>\n</tr>\n<tr>\n<td><code>options</code></td>\n<td>GenerateOptions</td>\n<td>No</td>\n<td>-</td>\n<td>Documentation generation options</td>\n</tr>\n</tbody></table>\n<p><strong>Default <code>include_patterns</code>:</strong></p>\n<pre><code>[&quot;*.js&quot;, &quot;*.ts&quot;, &quot;*.py&quot;, &quot;*.go&quot;, &quot;*.java&quot;]\n</code></pre>\n<p><strong>Default <code>exclude_patterns</code>:</strong></p>\n<pre><code>[&quot;node_modules/**&quot;, &quot;*.test.js&quot;, &quot;__pycache__/**&quot;, &quot;*.test.ts&quot;]\n</code></pre>\n<p><strong>Response:</strong> Same as <code>POST /generate</code></p>\n<hr>\n<h2>Configuration</h2>\n<h3>CLI Configuration</h3>\n<p>Stored in <code>~/.docforge/config.json</code>.</p>\n<pre><code class=\"language-json\">{\n  &quot;serverUrl&quot;: &quot;https://docforge.example.com&quot;\n}\n</code></pre>\n<table>\n<thead>\n<tr>\n<th>Setting</th>\n<th>Type</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>serverUrl</code></td>\n<td>string</td>\n<td><code>https://docforge-ptraxzy.loca.lt</code></td>\n<td>Default server URL</td>\n</tr>\n</tbody></table>\n<h3>Server Configuration</h3>\n<p>Can be set via environment variables or <code>.env</code> file.</p>\n<table>\n<thead>\n<tr>\n<th>Environment Variable</th>\n<th>Type</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>HOST</code></td>\n<td>string</td>\n<td><code>0.0.0.0</code></td>\n<td>Server host</td>\n</tr>\n<tr>\n<td><code>PORT</code></td>\n<td>integer</td>\n<td><code>8000</code></td>\n<td>Server port</td>\n</tr>\n<tr>\n<td><code>AI_BASE_URL</code></td>\n<td>string</td>\n<td><code>http://localhost:11434/v1</code></td>\n<td>OpenAI-compatible API endpoint</td>\n</tr>\n<tr>\n<td><code>AI_API_KEY</code></td>\n<td>string</td>\n<td><code>&quot;&quot;</code></td>\n<td>API key (optional for self-hosted)</td>\n</tr>\n<tr>\n<td><code>AI_MODEL</code></td>\n<td>string</td>\n<td><code>llama3</code></td>\n<td>AI model name</td>\n</tr>\n<tr>\n<td><code>AI_TIMEOUT</code></td>\n<td>float</td>\n<td><code>300.0</code></td>\n<td>AI request timeout in seconds</td>\n</tr>\n<tr>\n<td><code>MAX_TOKENS</code></td>\n<td>integer</td>\n<td><code>4000</code></td>\n<td>Maximum tokens for generation</td>\n</tr>\n<tr>\n<td><code>TEMPERATURE</code></td>\n<td>float</td>\n<td><code>0.7</code></td>\n<td>AI generation temperature</td>\n</tr>\n<tr>\n<td><code>RATE_LIMIT_PER_MINUTE</code></td>\n<td>integer</td>\n<td><code>10</code></td>\n<td>Rate limit for generation requests</td>\n</tr>\n<tr>\n<td><code>MAX_FILE_SIZE</code></td>\n<td>integer</td>\n<td><code>500000</code></td>\n<td>Maximum file size in bytes (500KB)</td>\n</tr>\n<tr>\n<td><code>MAX_FILES</code></td>\n<td>integer</td>\n<td><code>100</code></td>\n<td>Maximum files per request</td>\n</tr>\n<tr>\n<td><code>CORS_ORIGINS</code></td>\n<td>string</td>\n<td><code>*</code></td>\n<td>CORS allowed origins (comma-separated)</td>\n</tr>\n<tr>\n<td><code>LOG_LEVEL</code></td>\n<td>string</td>\n<td><code>INFO</code></td>\n<td>Logging level</td>\n</tr>\n</tbody></table>\n<h3>Supported Languages</h3>\n<pre><code class=\"language-python\">{\n  &quot;javascript&quot;: &quot;javascript&quot;, &quot;js&quot;: &quot;javascript&quot;,\n  &quot;typescript&quot;: &quot;typescript&quot;, &quot;ts&quot;: &quot;typescript&quot;,\n  &quot;python&quot;: &quot;python&quot;, &quot;py&quot;: &quot;python&quot;,\n  &quot;go&quot;: &quot;go&quot;, &quot;golang&quot;: &quot;go&quot;,\n  &quot;rust&quot;: &quot;rust&quot;, &quot;java&quot;: &quot;java&quot;,\n  &quot;php&quot;: &quot;php&quot;, &quot;ruby&quot;: &quot;ruby&quot;,\n  &quot;c&quot;: &quot;c&quot;, &quot;cpp&quot;: &quot;cpp&quot;, &quot;c++&quot;: &quot;cpp&quot;,\n  &quot;csharp&quot;: &quot;csharp&quot;, &quot;c#&quot;: &quot;csharp&quot;,\n  &quot;kotlin&quot;: &quot;kotlin&quot;, &quot;swift&quot;: &quot;swift&quot;\n}\n</code></pre>\n<hr>\n<h2>Data Models</h2>\n<h3>FileInput</h3>\n<p>Represents a source code file for documentation generation.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>path</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>File path relative to project root</td>\n</tr>\n<tr>\n<td><code>content</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>File content</td>\n</tr>\n<tr>\n<td><code>language</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Programming language</td>\n</tr>\n</tbody></table>\n<p><strong>Validation:</strong></p>\n<ul>\n<li><code>path</code> must be relative and cannot contain <code>..</code> or start with <code>/</code></li>\n<li><code>content</code> must not exceed <code>MAX_FILE_SIZE</code> (500KB default)</li>\n</ul>\n<hr>\n<h3>GitContext</h3>\n<p>Git repository context for enhanced documentation.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>recent_commits</code></td>\n<td>string[]</td>\n<td>No</td>\n<td><code>[]</code></td>\n<td>Recent commit messages</td>\n</tr>\n<tr>\n<td><code>branch</code></td>\n<td>string</td>\n<td>No</td>\n<td><code>main</code></td>\n<td>Current branch name</td>\n</tr>\n</tbody></table>\n<hr>\n<h3>GenerateOptions</h3>\n<p>Documentation generation options.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>include_readme</code></td>\n<td>boolean</td>\n<td><code>true</code></td>\n<td>Generate README.md</td>\n</tr>\n<tr>\n<td><code>include_api</code></td>\n<td>boolean</td>\n<td><code>true</code></td>\n<td>Generate API.md</td>\n</tr>\n<tr>\n<td><code>include_architecture</code></td>\n<td>boolean</td>\n<td><code>false</code></td>\n<td>Generate ARCHITECTURE.md</td>\n</tr>\n<tr>\n<td><code>include_changelog</code></td>\n<td>boolean</td>\n<td><code>false</code></td>\n<td>Generate CHANGELOG.md</td>\n</tr>\n</tbody></table>\n<hr>\n<h3>GenerateRequest</h3>\n<p>Complete request model for documentation generation.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>project_name</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Project name (max 200 chars)</td>\n</tr>\n<tr>\n<td><code>files</code></td>\n<td>FileInput[]</td>\n<td>Yes</td>\n<td>Source files (1-100 files)</td>\n</tr>\n<tr>\n<td><code>git_context</code></td>\n<td>GitContext</td>\n<td>No</td>\n<td>Git context</td>\n</tr>\n<tr>\n<td><code>options</code></td>\n<td>GenerateOptions</td>\n<td>No</td>\n<td>Generation options</td>\n</tr>\n</tbody></table>\n<p><strong>Validation:</strong></p>\n<ul>\n<li>Minimum 1 file required</li>\n<li>Maximum 100 files per request</li>\n</ul>\n<hr>\n<h3>RepoDownloadRequest</h3>\n<p>Request model for repository-based documentation.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_url</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>Git repository URL</td>\n</tr>\n<tr>\n<td><code>branch</code></td>\n<td>string</td>\n<td>No</td>\n<td><code>main</code></td>\n<td>Branch to clone</td>\n</tr>\n<tr>\n<td><code>include_patterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>See configuration</td>\n<td>Patterns to include</td>\n</tr>\n<tr>\n<td><code>exclude_patterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>See configuration</td>\n<td>Patterns to exclude</td>\n</tr>\n<tr>\n<td><code>options</code></td>\n<td>GenerateOptions</td>\n<td>No</td>\n<td>-</td>\n<td>Generation options</td>\n</tr>\n</tbody></table>\n<p><strong>Validation:</strong></p>\n<ul>\n<li><code>repo_url</code> must start with <code>https://</code>, <code>http://</code>, or <code>git@</code></li>\n</ul>\n<hr>\n<h3>GenerateResponse</h3>\n<p>Response model for documentation generation.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>success</code></td>\n<td>boolean</td>\n<td>Whether generation succeeded</td>\n</tr>\n<tr>\n<td><code>docs</code></td>\n<td>dict</td>\n<td>Generated documents (filename -&gt; content)</td>\n</tr>\n<tr>\n<td><code>metadata</code></td>\n<td>GenerateMetadata</td>\n<td>Generation metadata</td>\n</tr>\n</tbody></table>\n<hr>\n<h3>GenerateMetadata</h3>\n<p>Metadata about the generation process.</p>\n<table>\n<thead>\n<tr>\n<th>Field</th>\n<th>Type</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>files_processed</code></td>\n<td>integer</td>\n<td>Number of files processed</td>\n</tr>\n<tr>\n<td><code>tokens_used</code></td>\n<td>integer</td>\n<td>Total AI tokens consumed</td>\n</tr>\n<tr>\n<td><code>generated_at</code></td>\n<td>datetime</td>\n<td>ISO 8601 timestamp</td>\n</tr>\n</tbody></table>\n<hr>\n<h2>Services</h2>\n<h3>Client Services</h3>\n<h4><code>config.js</code></h4>\n<p><strong><code>getConfig()</code></strong></p>\n<p>Retrieve the current configuration.</p>\n<pre><code class=\"language-javascript\">import { getConfig } from &#39;./utils/config.js&#39;;\n\nconst config = getConfig();\n// Returns: { serverUrl: &quot;https://...&quot; }\n</code></pre>\n<p><strong><code>saveConfig(config)</code></strong></p>\n<p>Save configuration to disk.</p>\n<pre><code class=\"language-javascript\">import { saveConfig } from &#39;./utils/config.js&#39;;\n\nsaveConfig({ serverUrl: &quot;https://example.com&quot; });\n</code></pre>\n<p><strong><code>getServerUrl()</code></strong></p>\n<p>Get the configured server URL.</p>\n<pre><code class=\"language-javascript\">import { getServerUrl } from &#39;./utils/config.js&#39;;\n\nconst url = getServerUrl();\n</code></pre>\n<p><strong><code>setServerUrl(url)</code></strong></p>\n<p>Set and persist the server URL.</p>\n<pre><code class=\"language-javascript\">import { setServerUrl } from &#39;./utils/config.js&#39;;\n\nsetServerUrl(&quot;https://docforge.example.com&quot;);\n</code></pre>\n<hr>\n<h4><code>fileScanner.js</code></h4>\n<p><strong><code>scanCodeFiles(dirPath, includePatterns, excludePatterns)</code></strong></p>\n<p>Scan a directory for code files matching patterns.</p>\n<pre><code class=\"language-javascript\">import { scanCodeFiles } from &#39;./utils/fileScanner.js&#39;;\n\nconst files = await scanCodeFiles(&#39;./my-project&#39;, null, null);\n// Returns: [{ path: &quot;src/index.js&quot;, content: &quot;...&quot;, language: &quot;javascript&quot; }]\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>dirPath</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>Directory to scan</td>\n</tr>\n<tr>\n<td><code>includePatterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>Default patterns</td>\n<td>Glob patterns to include</td>\n</tr>\n<tr>\n<td><code>excludePatterns</code></td>\n<td>string[]</td>\n<td>No</td>\n<td>Default exclusions</td>\n<td>Glob patterns to exclude</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>Promise&lt;Array&lt;{path: string, content: string, language: string}&gt;&gt;</code></p>\n<hr>\n<p><strong><code>getProjectName(dirPath)</code></strong></p>\n<p>Extract project name from directory path.</p>\n<pre><code class=\"language-javascript\">import { getProjectName } from &#39;./utils/fileScanner.js&#39;;\n\nconst name = getProjectName(&#39;./my-awesome-project&#39;);\n// Returns: &quot;my-awesome-project&quot;\n</code></pre>\n<hr>\n<h3>Server Services</h3>\n<h4><code>AIProvider</code></h4>\n<p>OpenAI-compatible AI provider wrapper.</p>\n<p><strong><code>__init__()</code></strong></p>\n<p>Initialize the AI provider.</p>\n<pre><code class=\"language-python\">from services.ai_provider import AIProvider\n\nprovider = AIProvider()\n</code></pre>\n<p><strong><code>generate(prompt, system_prompt=None, model=None, max_tokens=None)</code></strong></p>\n<p>Generate text using the AI provider.</p>\n<pre><code class=\"language-python\">provider = AIProvider()\ntext, tokens = await provider.generate(\n    prompt=&quot;Explain this code&quot;,\n    system_prompt=&quot;You are a helpful assistant&quot;,\n    model=&quot;llama3&quot;,\n    max_tokens=1000\n)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>prompt</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>User prompt</td>\n</tr>\n<tr>\n<td><code>system_prompt</code></td>\n<td>string</td>\n<td>No</td>\n<td>None</td>\n<td>System prompt</td>\n</tr>\n<tr>\n<td><code>model</code></td>\n<td>string</td>\n<td>No</td>\n<td>Config default</td>\n<td>Override model</td>\n</tr>\n<tr>\n<td><code>max_tokens</code></td>\n<td>int</td>\n<td>No</td>\n<td>Config default</td>\n<td>Max tokens</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>tuple[str, int]</code> - (generated_text, tokens_used)</p>\n<p><strong>Raises:</strong></p>\n<ul>\n<li><code>ConnectionError</code> - Cannot connect to AI provider</li>\n<li><code>TimeoutError</code> - Request timed out</li>\n<li><code>httpx.HTTPStatusError</code> - API returned error</li>\n</ul>\n<hr>\n<p><strong><code>check_health()</code></strong></p>\n<p>Check AI provider connectivity.</p>\n<pre><code class=\"language-python\">provider = AIProvider()\nstatus = await provider.check_health()\n# Returns: {&quot;status&quot;: &quot;connected&quot;, &quot;base_url&quot;: &quot;...&quot;, &quot;model&quot;: &quot;...&quot;}\n</code></pre>\n<p><strong>Returns:</strong> <code>dict</code> with connection status</p>\n<hr>\n<p><strong><code>get_ai_provider()</code></strong></p>\n<p>Get singleton AI provider instance.</p>\n<pre><code class=\"language-python\">from services.ai_provider import get_ai_provider\n\nprovider = get_ai_provider()\n</code></pre>\n<hr>\n<h4><code>doc_generator.py</code></h4>\n<p><strong><code>build_prompt(request)</code></strong></p>\n<p>Build the AI prompt from a GenerateRequest.</p>\n<pre><code class=\"language-python\">from services.doc_generator import build_prompt\nfrom models.schemas import GenerateRequest\n\nprompt = build_prompt(request)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>request</code></td>\n<td>GenerateRequest</td>\n<td>Yes</td>\n<td>Generation request</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>str</code> - Formatted prompt for AI</p>\n<hr>\n<p><strong><code>parse_ai_response(response_text)</code></strong></p>\n<p>Parse AI response into structured documentation.</p>\n<pre><code class=\"language-python\">from services.doc_generator import parse_ai_response\n\ndocs = parse_ai_response(ai_response_text)\n// Returns: {&quot;README.md&quot;: &quot;# Project\\n...&quot;, &quot;API.md&quot;: &quot;...&quot;}\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>response_text</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Raw AI response</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>dict[str, str]</code> - Filename to content mapping</p>\n<hr>\n<p><strong><code>generate_docs_from_code(request)</code></strong></p>\n<p>Generate documentation from code files.</p>\n<pre><code class=\"language-python\">from services.doc_generator import generate_docs_from_code\nfrom models.schemas import GenerateRequest\n\ndocs, tokens = await generate_docs_from_code(request)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>request</code></td>\n<td>GenerateRequest</td>\n<td>Yes</td>\n<td>Generation request</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>tuple[dict[str, str], int]</code> - (docs, tokens_used)</p>\n<hr>\n<h4><code>repo_downloader.py</code></h4>\n<p><strong><code>clone_repo(repo_url, branch=&quot;main&quot;, dest_dir=None)</code></strong></p>\n<p>Clone a git repository to a temporary directory.</p>\n<pre><code class=\"language-python\">from services.repo_downloader import clone_repo\n\npath = clone_repo(&quot;https://github.com/user/repo.git&quot;, &quot;main&quot;)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_url</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>Repository URL</td>\n</tr>\n<tr>\n<td><code>branch</code></td>\n<td>string</td>\n<td>No</td>\n<td><code>&quot;main&quot;</code></td>\n<td>Branch to clone</td>\n</tr>\n<tr>\n<td><code>dest_dir</code></td>\n<td>string</td>\n<td>No</td>\n<td>Temp directory</td>\n<td>Destination path</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>str</code> - Path to cloned repository</p>\n<p><strong>Raises:</strong> <code>ValueError</code> - If cloning fails</p>\n<hr>\n<p><strong><code>get_files_from_repo(repo_path, include_patterns=None, exclude_patterns=None)</code></strong></p>\n<p>Get all files from a repository matching patterns.</p>\n<pre><code class=\"language-python\">from services.repo_downloader import get_files_from_repo\n\nfiles = get_files_from_repo(\n    &quot;/tmp/docforge_abc123&quot;,\n    include_patterns=[&quot;*.js&quot;, &quot;*.py&quot;],\n    exclude_patterns=[&quot;node_modules/**&quot;]\n)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Default</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_path</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>-</td>\n<td>Repository path</td>\n</tr>\n<tr>\n<td><code>include_patterns</code></td>\n<td>list[str]</td>\n<td>No</td>\n<td>Default patterns</td>\n<td>Include glob patterns</td>\n</tr>\n<tr>\n<td><code>exclude_patterns</code></td>\n<td>list[str]</td>\n<td>No</td>\n<td>Default exclusions</td>\n<td>Exclude glob patterns</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>list[dict]</code> - List of <code>{path, content, language}</code> dicts</p>\n<hr>\n<p><strong><code>get_git_context(repo_path)</code></strong></p>\n<p>Extract git context from a repository.</p>\n<pre><code class=\"language-python\">from services.repo_downloader import get_git_context\n\ncontext = get_git_context(&quot;/path/to/repo&quot;)\n// Returns: {&quot;recent_commits&quot;: [...], &quot;branch&quot;: &quot;main&quot;}\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_path</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Repository path</td>\n</tr>\n</tbody></table>\n<p><strong>Returns:</strong> <code>dict</code> - Git context with commits and branch</p>\n<hr>\n<p><strong><code>cleanup_repo(repo_path)</code></strong></p>\n<p>Remove a cloned repository directory.</p>\n<pre><code class=\"language-python\">from services.repo_downloader import cleanup_repo\n\ncleanup_repo(&quot;/tmp/docforge_abc123&quot;)\n</code></pre>\n<p><strong>Parameters:</strong></p>\n<table>\n<thead>\n<tr>\n<th>Parameter</th>\n<th>Type</th>\n<th>Required</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>repo_path</code></td>\n<td>string</td>\n<td>Yes</td>\n<td>Repository path to remove</td>\n</tr>\n</tbody></table>\n<hr>\n<h2>Rate Limiting</h2>\n<p>The server implements IP-based rate limiting for generation endpoints.</p>\n<ul>\n<li><strong>Limit:</strong> <code>RATE_LIMIT_PER_MINUTE</code> requests per minute (default: 10)</li>\n<li><strong>Scope:</strong> Applies to <code>/generate</code> and <code>/generate-from-repo</code> endpoints</li>\n</ul>\n<p><strong>Response when limit exceeded (429):</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;success&quot;: false,\n  &quot;error&quot;: &quot;Too Many Requests&quot;,\n  &quot;detail&quot;: &quot;Rate limit exceeded. Maximum 10 requests per minute.&quot;\n}\n</code></pre>\n<hr>\n<h2>Error Handling</h2>\n<h3>Client Errors (4xx)</h3>\n<table>\n<thead>\n<tr>\n<th>Status</th>\n<th>Error</th>\n<th>Cause</th>\n</tr>\n</thead>\n<tbody><tr>\n<td>400</td>\n<td>Bad Request</td>\n<td>Invalid input, path traversal, validation failure</td>\n</tr>\n<tr>\n<td>422</td>\n<td>Unprocessable Entity</td>\n<td>Schema validation failure</td>\n</tr>\n<tr>\n<td>429</td>\n<td>Too Many Requests</td>\n<td>Rate limit exceeded</td>\n</tr>\n</tbody></table>\n<h3>Server Errors (5xx)</h3>\n<table>\n<thead>\n<tr>\n<th>Status</th>\n<th>Error</th>\n<th>Cause</th>\n</tr>\n</thead>\n<tbody><tr>\n<td>500</td>\n<td>Internal Server Error</td>\n<td>Unexpected server error</td>\n</tr>\n<tr>\n<td>502</td>\n<td>Bad Gateway</td>\n<td>AI provider error</td>\n</tr>\n<tr>\n<td>503</td>\n<td>Service Unavailable</td>\n<td>AI provider unreachable</td>\n</tr>\n</tbody></table>\n<hr>\n<h2>Security Considerations</h2>\n<ol>\n<li><strong>Path Traversal Prevention:</strong> File paths cannot contain <code>..</code> or start with <code>/</code></li>\n<li><strong>File Size Limits:</strong> Individual files limited to 500KB</li>\n<li><strong>File Count Limits:</strong> Maximum 100 files per request</li>\n<li><strong>Rate Limiting:</strong> Prevents abuse of AI generation</li>\n<li><strong>CORS:</strong> Configurable allowed origins</li>\n</ol>\n<hr>\n<h2>Examples</h2>\n<h3>CLI Example</h3>\n<pre><code class=\"language-bash\"># Initialize project\ndocforge init\n\n# Generate docs interactively\ndocforge generate\n\n# Generate specific docs\ndocforge generate . --readme --api -o ./documentation\n</code></pre>\n<h3>API Example (cURL)</h3>\n<pre><code class=\"language-bash\">curl -X POST http://localhost:8000/generate \\\n  -H &quot;Content-Type: application/json&quot; \\\n  -d &#39;{\n    &quot;project_name&quot;: &quot;my-project&quot;,\n    &quot;files&quot;: [\n      {\n        &quot;path&quot;: &quot;src/main.py&quot;,\n        &quot;content&quot;: &quot;print(\\&quot;hello\\&quot;)&quot;,\n        &quot;language&quot;: &quot;python&quot;\n      }\n    ],\n    &quot;options&quot;: {\n      &quot;include_readme&quot;: true,\n      &quot;include_api&quot;: true\n    }\n  }&#39;\n</code></pre>\n<h3>Python Client Example</h3>\n<pre><code class=\"language-python\">import httpx\nimport asyncio\n\nasync def generate_docs():\n    async with httpx.AsyncClient() as client:\n        response = await client.post(\n            &quot;http://localhost:8000/generate&quot;,\n            json={\n                &quot;project_name&quot;: &quot;my-project&quot;,\n                &quot;files&quot;: [\n                    {&quot;path&quot;: &quot;main.py&quot;, &quot;content&quot;: &quot;code...&quot;, &quot;language&quot;: &quot;python&quot;}\n                ],\n                &quot;options&quot;: {&quot;include_readme&quot;: True, &quot;include_api&quot;: True}\n            },\n            timeout=300.0\n        )\n        data = response.json()\n        print(data[&quot;docs&quot;])\n\nasyncio.run(generate_docs())\n</code></pre>\n",
+    "toc": [
+      {
+        "text": "Table of Contents",
+        "id": "table-of-contents",
+        "level": 2
+      },
+      {
+        "text": "CLI Commands",
+        "id": "cli-commands",
+        "level": 2
+      },
+      {
+        "text": "Global Options",
+        "id": "global-options",
+        "level": 3
+      },
+      {
+        "text": "`docforge set-server <url>`",
+        "id": "docforge-set-server-url",
+        "level": 3
+      },
+      {
+        "text": "`docforge get-server`",
+        "id": "docforge-get-server",
+        "level": 3
+      },
+      {
+        "text": "`docforge generate [path>`",
+        "id": "docforge-generate-path",
+        "level": 3
+      },
+      {
+        "text": "`docforge init`",
+        "id": "docforge-init",
+        "level": 3
+      },
+      {
+        "text": "`docforge serve`",
+        "id": "docforge-serve",
+        "level": 3
+      },
+      {
+        "text": "REST API Endpoints",
+        "id": "rest-api-endpoints",
+        "level": 2
+      },
+      {
+        "text": "`GET /health`",
+        "id": "get-health",
+        "level": 3
+      },
+      {
+        "text": "`POST /generate`",
+        "id": "post-generate",
+        "level": 3
+      },
+      {
+        "text": "`POST /generate-from-repo`",
+        "id": "post-generate-from-repo",
+        "level": 3
+      },
+      {
+        "text": "Configuration",
+        "id": "configuration",
+        "level": 2
+      },
+      {
+        "text": "CLI Configuration",
+        "id": "cli-configuration",
+        "level": 3
+      },
+      {
+        "text": "Server Configuration",
+        "id": "server-configuration",
+        "level": 3
+      },
+      {
+        "text": "Supported Languages",
+        "id": "supported-languages",
+        "level": 3
+      },
+      {
+        "text": "Data Models",
+        "id": "data-models",
+        "level": 2
+      },
+      {
+        "text": "FileInput",
+        "id": "fileinput",
+        "level": 3
+      },
+      {
+        "text": "GitContext",
+        "id": "gitcontext",
+        "level": 3
+      },
+      {
+        "text": "GenerateOptions",
+        "id": "generateoptions",
+        "level": 3
+      },
+      {
+        "text": "GenerateRequest",
+        "id": "generaterequest",
+        "level": 3
+      },
+      {
+        "text": "RepoDownloadRequest",
+        "id": "repodownloadrequest",
+        "level": 3
+      },
+      {
+        "text": "GenerateResponse",
+        "id": "generateresponse",
+        "level": 3
+      },
+      {
+        "text": "GenerateMetadata",
+        "id": "generatemetadata",
+        "level": 3
+      },
+      {
+        "text": "Services",
+        "id": "services",
+        "level": 2
+      },
+      {
+        "text": "Client Services",
+        "id": "client-services",
+        "level": 3
+      },
+      {
+        "text": "Server Services",
+        "id": "server-services",
+        "level": 3
+      },
+      {
+        "text": "Rate Limiting",
+        "id": "rate-limiting",
+        "level": 2
+      },
+      {
+        "text": "Error Handling",
+        "id": "error-handling",
+        "level": 2
+      },
+      {
+        "text": "Client Errors (4xx)",
+        "id": "client-errors-4xx",
+        "level": 3
+      },
+      {
+        "text": "Server Errors (5xx)",
+        "id": "server-errors-5xx",
+        "level": 3
+      },
+      {
+        "text": "Security Considerations",
+        "id": "security-considerations",
+        "level": 2
+      },
+      {
+        "text": "Examples",
+        "id": "examples",
+        "level": 2
+      },
+      {
+        "text": "CLI Example",
+        "id": "cli-example",
+        "level": 3
+      },
+      {
+        "text": "API Example (cURL)",
+        "id": "api-example-curl",
+        "level": 3
+      },
+      {
+        "text": "Python Client Example",
+        "id": "python-client-example",
+        "level": 3
+      }
+    ],
+    "plainText": "DocForge API Documentation DocForge is an AI-powered documentation generator consisting of a CLI client and a REST API server. This document covers both the client-side CLI commands and the server-side API endpoints. Table of Contents CLI Commands The DocForge CLI is built with Commander.js and provides the following commands. Global Options `docforge set-server <url>` Set the DocForge server URL for future commands. **Parameters:** **Example:** docforge set-server https://docforge.example.com `docforge get-server` Display the currently configured server URL. **Example:** docforge get-server\n# Output: Server URL: https://docforge.example.com `docforge generate [path>` Generate documentation for a project. **Parameters:** **Options:** **Example:** # Interactive mode\ndocforge generate\n\n# Non-interactive with options\ndocforge generate ./my-project -o ./documentation --readme --api\n\n# With specific patterns\ndocforge generate -i \"**/*.js\" \"**/*.ts\" -e \"**/node_modules/**\" \"**/*.test.js\" `docforge init` Initialize DocForge in the current project directory. Creates: **Example:** docforge init `docforge serve` Start the DocForge server locally. **Options:** **Example:** docforge serve -p 8080 --ai-url http://localhost:11434/v1 --ai-model llama3 REST API Endpoints The DocForge server exposes a FastAPI-based REST API. **Base URL:** `http://{host}:{port}` **Default:** `http://0.0.0.0:8000` `GET /health` Health check endpoint with AI provider status. **Response:** {\n  \"status\": \"healthy\",\n  \"service\": \"docforge-server\",\n  \"timestamp\": \"2024-01-15T10:30:00.000Z\",\n  \"ai_provider\": {\n    \"status\": \"connected\",\n    \"base_url\": \"http://localhost:11434/v1\",\n    \"model\": \"llama3\"\n  }\n} **Response Fields:** `POST /generate` Generate documentation from source code files. **Request Body:** {\n  \"project_name\": \"my-project\",\n  \"files\": [\n    {\n      \"path\": \"src/index.js\",\n      \"content\": \"const app = express();\",\n      \"language\": \"javascript\"\n    }\n  ],\n  \"git_context\": {\n    \"recent_commits\": [\"feat: add endpoint\", \"fix: bug\"],\n    \"branch\": \"main\"\n  },\n  \"options\": {\n    \"include_readme\": true,\n    \"include_api\": true,\n    \"include_architecture\": false,\n    \"include_changelog\": false\n  }\n} **Request Fields:** **Response (200 OK):** {\n  \"success\": true,\n  \"docs\": {\n    \"README.md\": \"# My Project\\n\\nOverview...\",\n    \"API.md\": \"## Functions\\n\\n...\"\n  },\n  \"metadata\": {\n    \"files_processed\": 5,\n    \"tokens_used\": 1500,\n    \"generated_at\": \"2024-01-15T10:30:00.000Z\"\n  }\n} **Response Fields:** **Error Responses:** `POST /generate-from-repo` Download a git repository and generate documentation from its code. **Request Body:** {\n  \"repo_url\": \"https://github.com/user/repo.git\",\n  \"branch\": \"main\",\n  \"include_patterns\": [\"*.js\", \"*.ts\", \"*.py\"],\n  \"exclude_patterns\": [\"node_modules/**\", \"**/*.test.js\"],\n  \"options\": {\n    \"include_readme\": true,\n    \"include_api\": true,\n    \"include_architecture\": false,\n    \"include_changelog\": false\n  }\n} **Request Fields:** **Default `include_patterns`:** [\"*.js\", \"*.ts\", \"*.py\", \"*.go\", \"*.java\"] **Default `exclude_patterns`:** [\"node_modules/**\", \"*.test.js\", \"__pycache__/**\", \"*.test.ts\"] **Response:** Same as `POST /generate` Configuration CLI Configuration Stored in `~/.docforge/config.json`. {\n  \"serverUrl\": \"https://docforge.example.com\"\n} Server Configuration Can be set via environment variables or `.env` file. Supported Languages {\n  \"javascript\": \"javascript\", \"js\": \"javascript\",\n  \"typescript\": \"typescript\", \"ts\": \"typescript\",\n  \"python\": \"python\", \"py\": \"python\",\n  \"go\": \"go\", \"golang\": \"go\",\n  \"rust\": \"rust\", \"java\": \"java\",\n  \"php\": \"php\", \"ruby\": \"ruby\",\n  \"c\": \"c\", \"cpp\": \"cpp\", \"c++\": \"cpp\",\n  \"csharp\": \"csharp\", \"c#\": \"csharp\",\n  \"kotlin\": \"kotlin\", \"swift\": \"swift\"\n} Data Models FileInput Represents a source code file for documentation generation. **Validation:** GitContext Git repository context for enhanced documentation. GenerateOptions Documentation generation options. GenerateRequest Complete request model for documentation generation. **Validation:** RepoDownloadRequest Request model for repository-based documentation. **Validation:** GenerateResponse Response model for documentation generation. GenerateMetadata Metadata about the generation process. Services Client Services `config.js` **`getConfig()`** Retrieve the current configuration. import { getConfig } from './utils/config.js';\n\nconst config = getConfig();\n// Returns: { serverUrl: \"https://...\" } **`saveConfig(config)`** Save configuration to disk. import { saveConfig } from './utils/config.js';\n\nsaveConfig({ serverUrl: \"https://example.com\" }); **`getServerUrl()`** Get the configured server URL. import { getServerUrl } from './utils/config.js';\n\nconst url = getServerUrl(); **`setServerUrl(url)`** Set and persist the server URL. import { setServerUrl } from './utils/config.js';\n\nsetServerUrl(\"https://docforge.example.com\"); `fileScanner.js` **`scanCodeFiles(dirPath, includePatterns, excludePatterns)`** Scan a directory for code files matching patterns. import { scanCodeFiles } from './utils/fileScanner.js';\n\nconst files = await scanCodeFiles('./my-project', null, null);\n// Returns: [{ path: \"src/index.js\", content: \"...\", language: \"javascript\" }] **Parameters:** **Returns:** `Promise<Array<{path: string, content: string, language: string}>>` **`getProjectName(dirPath)`** Extract project name from directory path. import { getProjectName } from './utils/fileScanner.js';\n\nconst name = getProjectName('./my-awesome-project');\n// Returns: \"my-awesome-project\" Server Services `AIProvider` OpenAI-compatible AI provider wrapper. **`__init__()`** Initialize the AI provider. from services.ai_provider import AIProvider\n\nprovider = AIProvider() **`generate(prompt, system_prompt=None, model=None, max_tokens=None)`** Generate text using the AI provider. provider = AIProvider()\ntext, tokens = await provider.generate(\n    prompt=\"Explain this code\",\n    system_prompt=\"You are a helpful assistant\",\n    model=\"llama3\",\n    max_tokens=1000\n) **Parameters:** **Returns:** `tuple[str, int]` - (generated_text, tokens_used) **Raises:** **`check_health()`** Check AI provider connectivity. provider = AIProvider()\nstatus = await provider.check_health()\n# Returns: {\"status\": \"connected\", \"base_url\": \"...\", \"model\": \"...\"} **Returns:** `dict` with connection status **`get_ai_provider()`** Get singleton AI provider instance. from services.ai_provider import get_ai_provider\n\nprovider = get_ai_provider() `doc_generator.py` **`build_prompt(request)`** Build the AI prompt from a GenerateRequest. from services.doc_generator import build_prompt\nfrom models.schemas import GenerateRequest\n\nprompt = build_prompt(request) **Parameters:** **Returns:** `str` - Formatted prompt for AI **`parse_ai_response(response_text)`** Parse AI response into structured documentation. from services.doc_generator import parse_ai_response\n\ndocs = parse_ai_response(ai_response_text)\n// Returns: {\"README.md\": \"# Project\\n...\", \"API.md\": \"...\"} **Parameters:** **Returns:** `dict[str, str]` - Filename to content mapping **`generate_docs_from_code(request)`** Generate documentation from code files. from services.doc_generator import generate_docs_from_code\nfrom models.schemas import GenerateRequest\n\ndocs, tokens = await generate_docs_from_code(request) **Parameters:** **Returns:** `tuple[dict[str, str], int]` - (docs, tokens_used) `repo_downloader.py` **`clone_repo(repo_url, branch=\"main\", dest_dir=None)`** Clone a git repository to a temporary directory. from services.repo_downloader import clone_repo\n\npath = clone_repo(\"https://github.com/user/repo.git\", \"main\") **Parameters:** **Returns:** `str` - Path to cloned repository **Raises:** `ValueError` - If cloning fails **`get_files_from_repo(repo_path, include_patterns=None, exclude_patterns=None)`** Get all files from a repository matching patterns. from services.repo_downloader import get_files_from_repo\n\nfiles = get_files_from_repo(\n    \"/tmp/docforge_abc123\",\n    include_patterns=[\"*.js\", \"*.py\"],\n    exclude_patterns=[\"node_modules/**\"]\n) **Parameters:** **Returns:** `list[dict]` - List of `{path, content, language}` dicts **`get_git_context(repo_path)`** Extract git context from a repository. from services.repo_downloader import get_git_context\n\ncontext = get_git_context(\"/path/to/repo\")\n// Returns: {\"recent_commits\": [...], \"branch\": \"main\"} **Parameters:** **Returns:** `dict` - Git context with commits and branch **`cleanup_repo(repo_path)`** Remove a cloned repository directory. from services.repo_downloader import cleanup_repo\n\ncleanup_repo(\"/tmp/docforge_abc123\") **Parameters:** Rate Limiting The server implements IP-based rate limiting for generation endpoints. **Response when limit exceeded (429):** {\n  \"success\": false,\n  \"error\": \"Too Many Requests\",\n  \"detail\": \"Rate limit exceeded. Maximum 10 requests per minute.\"\n} Error Handling Client Errors (4xx) Server Errors (5xx) Security Considerations Examples CLI Example # Initialize project\ndocforge init\n\n# Generate docs interactively\ndocforge generate\n\n# Generate specific docs\ndocforge generate . --readme --api -o ./documentation API Example (cURL) curl -X POST http://localhost:8000/generate \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"project_name\": \"my-project\",\n    \"files\": [\n      {\n        \"path\": \"src/main.py\",\n        \"content\": \"print(\\\"hello\\\")\",\n        \"language\": \"python\"\n      }\n    ],\n    \"options\": {\n      \"include_readme\": true,\n      \"include_api\": true\n    }\n  }' Python Client Example import httpx\nimport asyncio\n\nasync def generate_docs():\n    async with httpx.AsyncClient() as client:\n        response = await client.post(\n            \"http://localhost:8000/generate\",\n            json={\n                \"project_name\": \"my-project\",\n                \"files\": [\n                    {\"path\": \"main.py\", \"content\": \"code...\", \"language\": \"python\"}\n                ],\n                \"options\": {\"include_readme\": True, \"include_api\": True}\n            },\n            timeout=300.0\n        )\n        data = response.json()\n        print(data[\"docs\"])\n\nasyncio.run(generate_docs())"
+  },
+  "readme": {
+    "title": "DocForge",
+    "html": "<h1>DocForge</h1>\n<p>AI-powered documentation generator — open source. DocForge analyzes your source code and automatically generates comprehensive markdown documentation using AI.</p>\n<h2>Overview</h2>\n<p>DocForge is a documentation generator that leverages AI to create professional documentation from your codebase. It supports multiple programming languages, generates various documentation types (README, API reference, architecture docs, changelog), and works with any OpenAI-compatible AI provider.</p>\n<h2>Features</h2>\n<ul>\n<li><strong>AI-Powered Generation</strong> — Uses any OpenAI-compatible AI endpoint (Ollama, vLLM, LM Studio, OpenAI, OpenRouter, etc.)</li>\n<li><strong>Multiple Documentation Types</strong> — Generate README.md, API.md, ARCHITECTURE.md, and CHANGELOG.md</li>\n<li><strong>Multi-Language Support</strong> — JavaScript, TypeScript, Python, Go, Java, Ruby, PHP, C, C++, C#, Swift, Kotlin, Rust, and more</li>\n<li><strong>Interactive &amp; CLI Modes</strong> — Use interactive prompts or pass command-line flags</li>\n<li><strong>Remote Repository Support</strong> — Generate docs directly from GitHub/GitLab URLs</li>\n<li><strong>File Filtering</strong> — Include/exclude patterns for precise file selection</li>\n<li><strong>Rate Limiting</strong> — Built-in protection against API abuse</li>\n<li><strong>Security</strong> — Path traversal prevention, input validation, request size limits</li>\n</ul>\n<h2>Architecture</h2>\n<pre><code>docforge/\n├── client/                  # Node.js CLI\n│   └── src/\n│       ├── index.js         # CLI entry point\n│       ├── commands/        # Command handlers\n│       │   ├── generate.js  # Generate documentation\n│       │   ├── init.js      # Initialize project\n│       │   └── serve.js     # Local server\n│       └── utils/           # Utilities\n│           ├── config.js    # Configuration management\n│           └── fileScanner.js # Code file scanner\n├── server/                  # Python FastAPI backend\n│   ├── main.py             # FastAPI application\n│   ├── config.py           # Server configuration\n│   ├── models/\n│   │   └── schemas.py      # Pydantic request/response models\n│   ├── routes/\n│   │   ├── generate.py     # Documentation generation endpoint\n│   │   ├── health.py       # Health check endpoint\n│   │   └── repo.py         # Repository-based generation\n│   └── services/\n│       ├── ai_provider.py      # AI provider integration\n│       ├── doc_generator.py    # Documentation generation logic\n│       └── repo_downloader.py  # Git operations\n└── scratch/                 # Test scripts\n</code></pre>\n<h2>Installation</h2>\n<h3>Prerequisites</h3>\n<ul>\n<li><strong>Node.js</strong> 18+ (for CLI)</li>\n<li><strong>Python</strong> 3.10+ (for server)</li>\n<li><strong>AI Provider</strong> — Ollama, OpenAI API key, or any OpenAI-compatible endpoint</li>\n</ul>\n<h3>Install CLI</h3>\n<pre><code class=\"language-bash\">npm install -g docforge\n</code></pre>\n<p>Or use without installation:</p>\n<pre><code class=\"language-bash\">npx docforge &lt;command&gt;\n</code></pre>\n<h3>Install Server Dependencies</h3>\n<pre><code class=\"language-bash\">cd server\npip install -r requirements.txt\n</code></pre>\n<h3>Setup AI Provider</h3>\n<p><strong>Ollama (self-hosted, recommended):</strong></p>\n<pre><code class=\"language-bash\"># Install Ollama\ncurl -fsSL https://ollama.com/install.sh | sh\n\n# Pull a model\nollama pull llama3\n</code></pre>\n<p><strong>OpenAI (cloud):</strong></p>\n<pre><code class=\"language-bash\">export OPENAI_API_KEY=&quot;your-api-key&quot;\nexport AI_BASE_URL=&quot;https://api.openai.com/v1&quot;\nexport AI_MODEL=&quot;gpt-4&quot;\n</code></pre>\n<h2>Quick Start</h2>\n<h3>1. Initialize a Project</h3>\n<pre><code class=\"language-bash\">cd your-project\ndocforge init\n</code></pre>\n<p>This creates <code>.docforge/config.json</code> and <code>docs/</code> directory.</p>\n<h3>2. Set Server URL</h3>\n<pre><code class=\"language-bash\"># For local server\ndocforge set-server http://localhost:8000\n\n# For hosted service\ndocforge set-server https://your-docforge-server.com\n</code></pre>\n<h3>3. Generate Documentation</h3>\n<p><strong>Interactive mode:</strong></p>\n<pre><code class=\"language-bash\">docforge generate\n</code></pre>\n<p><strong>Command-line mode:</strong></p>\n<pre><code class=\"language-bash\"># Generate all docs\ndocforge generate --readme --api --architecture --changelog\n\n# Custom output directory\ndocforge generate -o ./documentation\n\n# Include specific file patterns\ndocforge generate --include &quot;**/*.py&quot; &quot;**/*.js&quot;\n</code></pre>\n<h3>4. Generate from Git Repository</h3>\n<pre><code class=\"language-bash\">curl -X POST http://localhost:8000/generate-from-repo \\\n  -H &quot;Content-Type: application/json&quot; \\\n  -d &#39;{\n    &quot;repo_url&quot;: &quot;https://github.com/user/repo.git&quot;,\n    &quot;branch&quot;: &quot;main&quot;,\n    &quot;options&quot;: {\n      &quot;include_readme&quot;: true,\n      &quot;include_api&quot;: true\n    }\n  }&#39;\n</code></pre>\n<h2>Usage</h2>\n<h3>CLI Commands</h3>\n<table>\n<thead>\n<tr>\n<th>Command</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>docforge generate [path]</code></td>\n<td>Generate documentation for a project</td>\n</tr>\n<tr>\n<td><code>docforge init</code></td>\n<td>Initialize DocForge in current directory</td>\n</tr>\n<tr>\n<td><code>docforge serve</code></td>\n<td>Start the DocForge server locally</td>\n</tr>\n<tr>\n<td><code>docforge set-server &lt;url&gt;</code></td>\n<td>Set the server URL</td>\n</tr>\n<tr>\n<td><code>docforge get-server</code></td>\n<td>Show current server URL</td>\n</tr>\n</tbody></table>\n<h3>Generate Options</h3>\n<table>\n<thead>\n<tr>\n<th>Flag</th>\n<th>Description</th>\n<th>Default</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>-o, --output &lt;dir&gt;</code></td>\n<td>Output directory</td>\n<td><code>./docs</code></td>\n</tr>\n<tr>\n<td><code>-s, --server &lt;url&gt;</code></td>\n<td>Server URL override</td>\n<td>Configured URL</td>\n</tr>\n<tr>\n<td><code>-i, --include &lt;patterns&gt;</code></td>\n<td>File patterns to include</td>\n<td>Code files</td>\n</tr>\n<tr>\n<td><code>-e, --exclude &lt;patterns&gt;</code></td>\n<td>File patterns to exclude</td>\n<td>node_modules, etc.</td>\n</tr>\n<tr>\n<td><code>--readme</code></td>\n<td>Generate README.md</td>\n<td><code>true</code></td>\n</tr>\n<tr>\n<td><code>--api</code></td>\n<td>Generate API.md</td>\n<td><code>true</code></td>\n</tr>\n<tr>\n<td><code>--architecture</code></td>\n<td>Generate ARCHITECTURE.md</td>\n<td><code>false</code></td>\n</tr>\n<tr>\n<td><code>--changelog</code></td>\n<td>Generate CHANGELOG.md</td>\n<td><code>false</code></td>\n</tr>\n</tbody></table>\n<h3>Server Options</h3>\n<table>\n<thead>\n<tr>\n<th>Flag</th>\n<th>Description</th>\n<th>Default</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>-p, --port &lt;port&gt;</code></td>\n<td>Server port</td>\n<td><code>8000</code></td>\n</tr>\n<tr>\n<td><code>--ai-url &lt;url&gt;</code></td>\n<td>AI provider base URL</td>\n<td><code>http://localhost:11434/v1</code></td>\n</tr>\n<tr>\n<td><code>--ai-model &lt;model&gt;</code></td>\n<td>AI model name</td>\n<td><code>llama3</code></td>\n</tr>\n<tr>\n<td><code>--ai-key &lt;key&gt;</code></td>\n<td>AI provider API key</td>\n<td>(none)</td>\n</tr>\n</tbody></table>\n<h3>Environment Variables</h3>\n<table>\n<thead>\n<tr>\n<th>Variable</th>\n<th>Description</th>\n<th>Default</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>AI_BASE_URL</code></td>\n<td>AI provider URL</td>\n<td><code>http://localhost:11434/v1</code></td>\n</tr>\n<tr>\n<td><code>AI_MODEL</code></td>\n<td>AI model name</td>\n<td><code>llama3</code></td>\n</tr>\n<tr>\n<td><code>AI_API_KEY</code></td>\n<td>AI provider API key</td>\n<td>(none)</td>\n</tr>\n<tr>\n<td><code>AI_TIMEOUT</code></td>\n<td>Request timeout (seconds)</td>\n<td><code>300</code></td>\n</tr>\n<tr>\n<td><code>MAX_TOKENS</code></td>\n<td>Max tokens per request</td>\n<td><code>4000</code></td>\n</tr>\n<tr>\n<td><code>TEMPERATURE</code></td>\n<td>AI temperature</td>\n<td><code>0.7</code></td>\n</tr>\n<tr>\n<td><code>RATE_LIMIT_PER_MINUTE</code></td>\n<td>Rate limit</td>\n<td><code>10</code></td>\n</tr>\n<tr>\n<td><code>MAX_FILES</code></td>\n<td>Max files per request</td>\n<td><code>100</code></td>\n</tr>\n<tr>\n<td><code>MAX_FILE_SIZE</code></td>\n<td>Max file size (bytes)</td>\n<td><code>500000</code></td>\n</tr>\n<tr>\n<td><code>CORS_ORIGINS</code></td>\n<td>CORS allowed origins</td>\n<td><code>*</code></td>\n</tr>\n<tr>\n<td><code>LOG_LEVEL</code></td>\n<td>Logging level</td>\n<td><code>INFO</code></td>\n</tr>\n</tbody></table>\n<h2>API Reference</h2>\n<h3>Endpoints</h3>\n<h4><code>POST /generate</code></h4>\n<p>Generate documentation from source code files.</p>\n<p><strong>Request:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;project_name&quot;: &quot;my-project&quot;,\n  &quot;files&quot;: [\n    {\n      &quot;path&quot;: &quot;src/main.py&quot;,\n      &quot;content&quot;: &quot;print(&#39;hello&#39;)&quot;,\n      &quot;language&quot;: &quot;python&quot;\n    }\n  ],\n  &quot;options&quot;: {\n    &quot;include_readme&quot;: true,\n    &quot;include_api&quot;: true,\n    &quot;include_architecture&quot;: false,\n    &quot;include_changelog&quot;: false\n  }\n}\n</code></pre>\n<p><strong>Response:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;success&quot;: true,\n  &quot;docs&quot;: {\n    &quot;README.md&quot;: &quot;# My Project\\n\\n...&quot;,\n    &quot;API.md&quot;: &quot;## Functions\\n\\n...&quot;\n  },\n  &quot;metadata&quot;: {\n    &quot;files_processed&quot;: 5,\n    &quot;tokens_used&quot;: 1500,\n    &quot;generated_at&quot;: &quot;2024-01-15T10:30:00Z&quot;\n  }\n}\n</code></pre>\n<h4><code>POST /generate-from-repo</code></h4>\n<p>Clone a repository and generate documentation.</p>\n<p><strong>Request:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;repo_url&quot;: &quot;https://github.com/user/repo.git&quot;,\n  &quot;branch&quot;: &quot;main&quot;,\n  &quot;include_patterns&quot;: [&quot;*.py&quot;, &quot;*.js&quot;],\n  &quot;exclude_patterns&quot;: [&quot;node_modules/**&quot;, &quot;**/test/**&quot;],\n  &quot;options&quot;: {\n    &quot;include_readme&quot;: true,\n    &quot;include_api&quot;: true\n  }\n}\n</code></pre>\n<h4><code>GET /health</code></h4>\n<p>Health check with AI provider status.</p>\n<p><strong>Response:</strong></p>\n<pre><code class=\"language-json\">{\n  &quot;status&quot;: &quot;healthy&quot;,\n  &quot;service&quot;: &quot;docforge-server&quot;,\n  &quot;timestamp&quot;: &quot;2024-01-15T10:30:00Z&quot;,\n  &quot;ai_provider&quot;: {\n    &quot;status&quot;: &quot;connected&quot;,\n    &quot;base_url&quot;: &quot;http://localhost:11434/v1&quot;,\n    &quot;model&quot;: &quot;llama3&quot;\n  }\n}\n</code></pre>\n<h2>Supported Languages</h2>\n<p>DocForge automatically detects and processes the following languages:</p>\n<ul>\n<li>JavaScript / TypeScript (.js, .jsx, .mjs, .cjs, .ts, .tsx)</li>\n<li>Python (.py, .pyw)</li>\n<li>Go (.go)</li>\n<li>Java (.java)</li>\n<li>Ruby (.rb)</li>\n<li>PHP (.php)</li>\n<li>C / C++ (.c, .cpp, .h, .hpp)</li>\n<li>C# (.cs)</li>\n<li>Swift (.swift)</li>\n<li>Kotlin (.kt)</li>\n<li>Rust (.rs)</li>\n<li>Scala (.scala)</li>\n<li>R (.r)</li>\n<li>Lua (.lua)</li>\n<li>Perl (.pl)</li>\n<li>Bash / Shell (.sh, .bash, .zsh)</li>\n</ul>\n<h2>Configuration</h2>\n<h3>Client Configuration</h3>\n<p>Stored in <code>~/.docforge/config.json</code>:</p>\n<pre><code class=\"language-json\">{\n  &quot;serverUrl&quot;: &quot;http://localhost:8000&quot;\n}\n</code></pre>\n<h3>Project Configuration</h3>\n<p>Created by <code>docforge init</code> in <code>.docforge/config.json</code>:</p>\n<pre><code class=\"language-json\">{\n  &quot;version&quot;: &quot;0.1.0&quot;,\n  &quot;project&quot;: &quot;my-project&quot;,\n  &quot;created&quot;: &quot;2024-01-15T10:00:00Z&quot;\n}\n</code></pre>\n<h3>Server Configuration</h3>\n<p>Create a <code>.env</code> file in the server directory:</p>\n<pre><code class=\"language-env\">AI_BASE_URL=http://localhost:11434/v1\nAI_MODEL=llama3\nAI_API_KEY=\nAI_TIMEOUT=300\nMAX_TOKENS=4000\nTEMPERATURE=0.7\nRATE_LIMIT_PER_MINUTE=10\nMAX_FILES=100\nMAX_FILE_SIZE=500000\nCORS_ORIGINS=*\nLOG_LEVEL=INFO\n</code></pre>\n<h2>Development</h2>\n<h3>Running Tests</h3>\n<pre><code class=\"language-bash\">cd scratch\npython -m pytest test_backend.py -v\n</code></pre>\n<h3>Starting the Server</h3>\n<pre><code class=\"language-bash\">cd server\nuvicorn main:app --host 0.0.0.0 --port 8000 --reload\n</code></pre>\n<h3>CLI Development</h3>\n<pre><code class=\"language-bash\">cd client\nnpm install\nnpm link  # Link for local development\n</code></pre>\n<h2>Security</h2>\n<ul>\n<li><strong>Path Traversal Prevention</strong> — File paths are validated and cannot escape the project directory</li>\n<li><strong>Input Validation</strong> — All requests are validated using Pydantic schemas</li>\n<li><strong>Request Size Limits</strong> — Maximum file size and file count limits are enforced</li>\n<li><strong>Rate Limiting</strong> — IP-based rate limiting prevents API abuse</li>\n<li><strong>CORS Configuration</strong> — Configurable cross-origin request handling</li>\n</ul>\n<h2>License</h2>\n<p>MIT License</p>\n<h2>Contributing</h2>\n<p>Contributions are welcome! Please feel free to submit issues and pull requests.</p>\n",
+    "toc": [
+      {
+        "text": "Overview",
+        "id": "overview",
+        "level": 2
+      },
+      {
+        "text": "Features",
+        "id": "features",
+        "level": 2
+      },
+      {
+        "text": "Architecture",
+        "id": "architecture",
+        "level": 2
+      },
+      {
+        "text": "Installation",
+        "id": "installation",
+        "level": 2
+      },
+      {
+        "text": "Prerequisites",
+        "id": "prerequisites",
+        "level": 3
+      },
+      {
+        "text": "Install CLI",
+        "id": "install-cli",
+        "level": 3
+      },
+      {
+        "text": "Install Server Dependencies",
+        "id": "install-server-dependencies",
+        "level": 3
+      },
+      {
+        "text": "Setup AI Provider",
+        "id": "setup-ai-provider",
+        "level": 3
+      },
+      {
+        "text": "Quick Start",
+        "id": "quick-start",
+        "level": 2
+      },
+      {
+        "text": "1. Initialize a Project",
+        "id": "1-initialize-a-project",
+        "level": 3
+      },
+      {
+        "text": "2. Set Server URL",
+        "id": "2-set-server-url",
+        "level": 3
+      },
+      {
+        "text": "3. Generate Documentation",
+        "id": "3-generate-documentation",
+        "level": 3
+      },
+      {
+        "text": "4. Generate from Git Repository",
+        "id": "4-generate-from-git-repository",
+        "level": 3
+      },
+      {
+        "text": "Usage",
+        "id": "usage",
+        "level": 2
+      },
+      {
+        "text": "CLI Commands",
+        "id": "cli-commands",
+        "level": 3
+      },
+      {
+        "text": "Generate Options",
+        "id": "generate-options",
+        "level": 3
+      },
+      {
+        "text": "Server Options",
+        "id": "server-options",
+        "level": 3
+      },
+      {
+        "text": "Environment Variables",
+        "id": "environment-variables",
+        "level": 3
+      },
+      {
+        "text": "API Reference",
+        "id": "api-reference",
+        "level": 2
+      },
+      {
+        "text": "Endpoints",
+        "id": "endpoints",
+        "level": 3
+      },
+      {
+        "text": "Supported Languages",
+        "id": "supported-languages",
+        "level": 2
+      },
+      {
+        "text": "Configuration",
+        "id": "configuration",
+        "level": 2
+      },
+      {
+        "text": "Client Configuration",
+        "id": "client-configuration",
+        "level": 3
+      },
+      {
+        "text": "Project Configuration",
+        "id": "project-configuration",
+        "level": 3
+      },
+      {
+        "text": "Server Configuration",
+        "id": "server-configuration",
+        "level": 3
+      },
+      {
+        "text": "Development",
+        "id": "development",
+        "level": 2
+      },
+      {
+        "text": "Running Tests",
+        "id": "running-tests",
+        "level": 3
+      },
+      {
+        "text": "Starting the Server",
+        "id": "starting-the-server",
+        "level": 3
+      },
+      {
+        "text": "CLI Development",
+        "id": "cli-development",
+        "level": 3
+      },
+      {
+        "text": "Security",
+        "id": "security",
+        "level": 2
+      },
+      {
+        "text": "License",
+        "id": "license",
+        "level": 2
+      },
+      {
+        "text": "Contributing",
+        "id": "contributing",
+        "level": 2
+      }
+    ],
+    "plainText": "DocForge AI-powered documentation generator — open source. DocForge analyzes your source code and automatically generates comprehensive markdown documentation using AI. Overview DocForge is a documentation generator that leverages AI to create professional documentation from your codebase. It supports multiple programming languages, generates various documentation types (README, API reference, architecture docs, changelog), and works with any OpenAI-compatible AI provider. Features Architecture docforge/\n├── client/                  # Node.js CLI\n│   └── src/\n│       ├── index.js         # CLI entry point\n│       ├── commands/        # Command handlers\n│       │   ├── generate.js  # Generate documentation\n│       │   ├── init.js      # Initialize project\n│       │   └── serve.js     # Local server\n│       └── utils/           # Utilities\n│           ├── config.js    # Configuration management\n│           └── fileScanner.js # Code file scanner\n├── server/                  # Python FastAPI backend\n│   ├── main.py             # FastAPI application\n│   ├── config.py           # Server configuration\n│   ├── models/\n│   │   └── schemas.py      # Pydantic request/response models\n│   ├── routes/\n│   │   ├── generate.py     # Documentation generation endpoint\n│   │   ├── health.py       # Health check endpoint\n│   │   └── repo.py         # Repository-based generation\n│   └── services/\n│       ├── ai_provider.py      # AI provider integration\n│       ├── doc_generator.py    # Documentation generation logic\n│       └── repo_downloader.py  # Git operations\n└── scratch/                 # Test scripts Installation Prerequisites Install CLI npm install -g docforge Or use without installation: npx docforge <command> Install Server Dependencies cd server\npip install -r requirements.txt Setup AI Provider **Ollama (self-hosted, recommended):** # Install Ollama\ncurl -fsSL https://ollama.com/install.sh | sh\n\n# Pull a model\nollama pull llama3 **OpenAI (cloud):** export OPENAI_API_KEY=\"your-api-key\"\nexport AI_BASE_URL=\"https://api.openai.com/v1\"\nexport AI_MODEL=\"gpt-4\" Quick Start 1. Initialize a Project cd your-project\ndocforge init This creates `.docforge/config.json` and `docs/` directory. 2. Set Server URL # For local server\ndocforge set-server http://localhost:8000\n\n# For hosted service\ndocforge set-server https://your-docforge-server.com 3. Generate Documentation **Interactive mode:** docforge generate **Command-line mode:** # Generate all docs\ndocforge generate --readme --api --architecture --changelog\n\n# Custom output directory\ndocforge generate -o ./documentation\n\n# Include specific file patterns\ndocforge generate --include \"**/*.py\" \"**/*.js\" 4. Generate from Git Repository curl -X POST http://localhost:8000/generate-from-repo \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"repo_url\": \"https://github.com/user/repo.git\",\n    \"branch\": \"main\",\n    \"options\": {\n      \"include_readme\": true,\n      \"include_api\": true\n    }\n  }' Usage CLI Commands Generate Options Server Options Environment Variables API Reference Endpoints `POST /generate` Generate documentation from source code files. **Request:** {\n  \"project_name\": \"my-project\",\n  \"files\": [\n    {\n      \"path\": \"src/main.py\",\n      \"content\": \"print('hello')\",\n      \"language\": \"python\"\n    }\n  ],\n  \"options\": {\n    \"include_readme\": true,\n    \"include_api\": true,\n    \"include_architecture\": false,\n    \"include_changelog\": false\n  }\n} **Response:** {\n  \"success\": true,\n  \"docs\": {\n    \"README.md\": \"# My Project\\n\\n...\",\n    \"API.md\": \"## Functions\\n\\n...\"\n  },\n  \"metadata\": {\n    \"files_processed\": 5,\n    \"tokens_used\": 1500,\n    \"generated_at\": \"2024-01-15T10:30:00Z\"\n  }\n} `POST /generate-from-repo` Clone a repository and generate documentation. **Request:** {\n  \"repo_url\": \"https://github.com/user/repo.git\",\n  \"branch\": \"main\",\n  \"include_patterns\": [\"*.py\", \"*.js\"],\n  \"exclude_patterns\": [\"node_modules/**\", \"**/test/**\"],\n  \"options\": {\n    \"include_readme\": true,\n    \"include_api\": true\n  }\n} `GET /health` Health check with AI provider status. **Response:** {\n  \"status\": \"healthy\",\n  \"service\": \"docforge-server\",\n  \"timestamp\": \"2024-01-15T10:30:00Z\",\n  \"ai_provider\": {\n    \"status\": \"connected\",\n    \"base_url\": \"http://localhost:11434/v1\",\n    \"model\": \"llama3\"\n  }\n} Supported Languages DocForge automatically detects and processes the following languages: Configuration Client Configuration Stored in `~/.docforge/config.json`: {\n  \"serverUrl\": \"http://localhost:8000\"\n} Project Configuration Created by `docforge init` in `.docforge/config.json`: {\n  \"version\": \"0.1.0\",\n  \"project\": \"my-project\",\n  \"created\": \"2024-01-15T10:00:00Z\"\n} Server Configuration Create a `.env` file in the server directory: AI_BASE_URL=http://localhost:11434/v1\nAI_MODEL=llama3\nAI_API_KEY=\nAI_TIMEOUT=300\nMAX_TOKENS=4000\nTEMPERATURE=0.7\nRATE_LIMIT_PER_MINUTE=10\nMAX_FILES=100\nMAX_FILE_SIZE=500000\nCORS_ORIGINS=*\nLOG_LEVEL=INFO Development Running Tests cd scratch\npython -m pytest test_backend.py -v Starting the Server cd server\nuvicorn main:app --host 0.0.0.0 --port 8000 --reload CLI Development cd client\nnpm install\nnpm link  # Link for local development Security License MIT License Contributing Contributions are welcome! Please feel free to submit issues and pull requests."
+  }
+};
+  </script>
+
+  <!-- Application Controller -->
+  <script>
+    function docsApp() {
+      return {
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        activeTab: '',
+        searchQuery: '',
+        searchResults: [],
+        mobileSidebarOpen: false,
+        docs: {},
+        
+        init() {
+          this.docs = window.DOCS_DATA || {};
+          
+          const keys = Object.keys(this.docs);
+          if (keys.length > 0) {
+            const hash = window.location.hash.slice(2);
+            if (keys.includes(hash)) {
+              this.activeTab = hash;
+            } else {
+              this.activeTab = keys[0];
+            }
+          }
+          
+          this.$watch('darkMode', val => localStorage.setItem('darkMode', val));
+          
+          window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.slice(2);
+            if (Object.keys(this.docs).includes(hash)) {
+              this.activeTab = hash;
+            }
+          });
+          
+          this.$watch('activeTab', () => {
+            window.location.hash = '/' + this.activeTab;
+            this.highlightCode();
+            this.mobileSidebarOpen = false;
+          });
+          
+          this.$nextTick(() => this.highlightCode());
+        },
+        
+        get activeDoc() {
+          return this.docs[this.activeTab] || { title: '', html: '', toc: [] };
+        },
+        
+        highlightCode() {
+          this.$nextTick(() => {
+            if (window.Prism) {
+              window.Prism.highlightAll();
+            }
+            // Add Copy Buttons to all codeblocks
+            const codeBlocks = document.querySelectorAll('pre');
+            codeBlocks.forEach(pre => {
+              if (pre.querySelector('.copy-btn')) return; // already added
+              
+              pre.style.position = 'relative';
+              const button = document.createElement('button');
+              button.className = 'copy-btn absolute right-3 top-3 rounded-lg border border-slate-800 bg-slate-950/80 px-2.5 py-1 text-xs text-slate-400 hover:text-white backdrop-blur opacity-0 transition-opacity duration-150';
+              button.textContent = 'Copy';
+              
+              pre.addEventListener('mouseenter', () => button.classList.remove('opacity-0'));
+              pre.addEventListener('mouseleave', () => button.classList.add('opacity-0'));
+              
+              button.addEventListener('click', () => {
+                const code = pre.querySelector('code').innerText;
+                navigator.clipboard.writeText(code).then(() => {
+                  button.textContent = 'Copied!';
+                  setTimeout(() => button.textContent = 'Copy', 2000);
+                });
+              });
+              
+              pre.appendChild(button);
+            });
+          });
+        },
+        
+        search() {
+          if (!this.searchQuery.trim()) {
+            this.searchResults = [];
+            return;
+          }
+          const query = this.searchQuery.toLowerCase();
+          this.searchResults = Object.entries(this.docs)
+            .filter(([key, doc]) => doc.plainText.toLowerCase().includes(query) || doc.title.toLowerCase().includes(query))
+            .map(([key, doc]) => {
+              const index = doc.plainText.toLowerCase().indexOf(query);
+              let snippet = doc.plainText.slice(Math.max(0, index - 30), Math.min(doc.plainText.length, index + 50));
+              if (snippet.length < doc.plainText.length) {
+                snippet = '...' + snippet + '...';
+              }
+              return {
+                key,
+                title: doc.title,
+                snippet: snippet
+              };
+            });
+        },
+        
+        selectSearchResult(key) {
+          this.activeTab = key;
+          this.searchQuery = '';
+          this.searchResults = [];
+        }
+      }
+    }
+  </script>
+</body>
+</html>

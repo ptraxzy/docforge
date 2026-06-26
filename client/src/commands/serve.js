@@ -10,7 +10,7 @@ export async function serve(options) {
   const aiModel = options.aiModel || process.env.AI_MODEL || 'llama3';
   const aiKey = options.aiKey || process.env.AI_API_KEY || '';
 
-  console.log(chalk.blue('🔧 DocForge Server\n'));
+  console.log(chalk.blue('DocForge Server\n'));
   console.log(chalk.gray(`   AI Provider:  ${aiUrl}`));
   console.log(chalk.gray(`   AI Model:     ${aiModel}`));
   console.log(chalk.gray(`   API Key:      ${aiKey ? '***' + aiKey.slice(-4) : '(none — self-hosted mode)'}`));
@@ -23,7 +23,7 @@ export async function serve(options) {
 
   // Check if server exists
   if (!fs.existsSync(serverPath)) {
-    console.log(chalk.red('❌ Server directory not found.'));
+    console.log(chalk.red('[Error] Server directory not found.'));
     console.log(chalk.gray(`Expected at: ${serverPath}`));
     console.log(chalk.blue('\nTo run the server, you need the full DocForge repo.'));
     console.log(chalk.gray('The CLI is designed to connect to a remote server.'));
@@ -50,7 +50,7 @@ export async function serve(options) {
   });
 
   serverProcess.on('error', (err) => {
-    console.log(chalk.red(`\n❌ Failed to start server: ${err.message}`));
+    console.log(chalk.red(`\n[Error] Failed to start server: ${err.message}`));
     console.log(chalk.yellow('\nMake sure Python and uvicorn are installed:'));
     console.log(chalk.gray('   cd server && pip install -r requirements.txt\n'));
     process.exit(1);

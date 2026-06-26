@@ -63,7 +63,7 @@ class AIProvider:
                     f"{self.base_url}/chat/completions",
                     json=data,
                     headers=headers,
-                    timeout=180.0,
+                    timeout=config.AI_TIMEOUT,
                 )
                 response.raise_for_status()
                 result = response.json()
@@ -108,7 +108,7 @@ class AIProvider:
             else:
                 raise ValueError(f"AI provider error ({status}): {detail}")
         except httpx.TimeoutException:
-            logger.error("AI generation timed out after 180s")
+            logger.error(f"AI generation timed out after {config.AI_TIMEOUT}s")
             raise TimeoutError("AI generation timed out. The request may be too large.")
         except (KeyError, IndexError) as e:
             logger.error(f"Unexpected AI response format: {e}")

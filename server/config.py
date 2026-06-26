@@ -17,6 +17,7 @@ class Config:
     AI_BASE_URL: str = os.getenv("AI_BASE_URL", "http://localhost:11434/v1")
     AI_API_KEY: str = os.getenv("AI_API_KEY", "")  # Optional for self-hosted
     AI_MODEL: str = os.getenv("AI_MODEL", "llama3")
+    AI_TIMEOUT: float = float(os.getenv("AI_TIMEOUT", "300.0"))
 
     # Generation settings
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4000"))
@@ -70,6 +71,7 @@ def validate_config():
     logger.info(f"  Host:          {config.HOST}:{config.PORT}")
     logger.info(f"  AI Base URL:   {config.AI_BASE_URL}")
     logger.info(f"  AI Model:      {config.AI_MODEL}")
+    logger.info(f"  AI Timeout:    {config.AI_TIMEOUT}s")
     logger.info(f"  AI API Key:    {'***' + config.AI_API_KEY[-4:] if config.AI_API_KEY else '(none — self-hosted mode)'}")
     logger.info(f"  Max Tokens:    {config.MAX_TOKENS}")
     logger.info(f"  Temperature:   {config.TEMPERATURE}")

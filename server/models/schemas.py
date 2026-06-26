@@ -46,6 +46,7 @@ class GenerateRequest(BaseModel):
     files: list[FileInput] = Field(..., description="Source code files")
     git_context: Optional[GitContext] = Field(default=None, description="Git context")
     options: GenerateOptions = Field(default_factory=GenerateOptions)
+    framework: Optional[str] = Field(default=None, description="Detected framework")
 
     @field_validator("files")
     @classmethod

@@ -32,7 +32,15 @@ FastAPI server that receives code from CLI client, processes with AI, returns ge
   "options": {
     "include_readme": true,
     "include_api": true,
-    "include_architecture": false
+    "include_architecture": false,
+    "include_changelog": false,
+    "include_introduction": false,
+    "include_features": false,
+    "include_configuration": false
+  },
+  "framework": "react-vite",
+  "existing_docs": {
+    "README.md": "# My Project\n\n..."
   }
 }
 ```

@@ -39,6 +39,9 @@ class GenerateOptions(BaseModel):
         default=False, description="Generate ARCHITECTURE.md"
     )
     include_changelog: bool = Field(default=False, description="Generate CHANGELOG.md")
+    include_introduction: bool = Field(default=False, description="Generate introduction.md")
+    include_features: bool = Field(default=False, description="Generate features.md")
+    include_configuration: bool = Field(default=False, description="Generate configuration.md")
 
 
 class GenerateRequest(BaseModel):
@@ -47,6 +50,7 @@ class GenerateRequest(BaseModel):
     git_context: Optional[GitContext] = Field(default=None, description="Git context")
     options: GenerateOptions = Field(default_factory=GenerateOptions)
     framework: Optional[str] = Field(default=None, description="Detected framework")
+    existing_docs: Optional[dict[str, str]] = Field(default=None, description="Existing docs to edit & append")
 
     @field_validator("files")
     @classmethod

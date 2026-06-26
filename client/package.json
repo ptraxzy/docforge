@@ -1,6 +1,6 @@
 {
   "name": "@ultramaxoo/docforge",
-  "version": "0.1.8",
+  "version": "0.4.2",
   "description": "AI-powered documentation generator - open source",
   "publishConfig": {
     "access": "public"
@@ -8,7 +8,7 @@
   "main": "src/index.js",
   "type": "module",
   "bin": {
-    "docforge": "./src/index.js"
+    "docforge": "src/index.js"
   },
   "scripts": {
     "start": "node src/index.js"

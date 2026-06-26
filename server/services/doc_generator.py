@@ -123,9 +123,15 @@ def get_system_prompt(filename: str) -> str:
     elif filename == "API.md":
         guidelines = "The API.md should contain detailed reference documentation for all public endpoints, classes, methods, functions, their parameters (with types), and return values found in the source code."
     elif filename == "ARCHITECTURE.md":
-        guidelines = "The ARCHITECTURE.md should outline the high-level design of the project, codebase directory structure, key component modules, design patterns used, and the flow of data between components."
+        guidelines = "The ARCHITECTURE.md should outline the high-level design of the project, codebase directory structure, key component modules, design patterns used, and the flow of data between components. In addition, include a detailed 'Semantic Design System' section outlining: 1) Visual Theme & Atmosphere (mood, density, aesthetic philosophy), 2) Color Palette & Roles (list key colors with natural descriptive names, hex codes in parentheses, and functional roles), 3) Typography Rules, 4) Component Stylings (buttons, cards, inputs), and 5) Layout Principles (margins, spacing, grid alignment)."
     elif filename == "CHANGELOG.md":
         guidelines = "The CHANGELOG.md should list a history of changes or releases, structured chronologically using the provided git commits context. Group changes by type (e.g., Added, Changed, Fixed) where appropriate."
+    elif filename == "introduction.md":
+        guidelines = "The introduction.md should contain a high-level, user-friendly overview of the application. Explain what the project is, its main purpose, target audience, and how to get started using it from a user's perspective. Avoid developer-specific details like codebase directory structures, source code paths, internal API protocols, or software package dependencies. Absolutely no backend code blocks, SQL queries, or technical system references."
+    elif filename == "features.md":
+        guidelines = "The features.md should outline all major user-facing features and capabilities of the application. For each feature, explain what it does, how it benefits the user, and provide step-by-step user instructions or guides on how to interact with it. Keep the focus entirely on user actions, avoiding internal implementation details, code logic, database structures, or technical variables. Absolutely no code blocks, endpoint URLs, or system schemas."
+    elif filename == "configuration.md":
+        guidelines = "The configuration.md should provide a guide for end-users, administrators, or deployers on how to configure and setup the application. Detail key user settings, customization options, environment configurations, and setup steps required to run or configure the app. Do NOT include technical database migrations, internal architecture flow diagrams, class/methods schemas, backend endpoints (like POST/GET paths), database tables, or API route definitions. Keep it strictly focused on user settings and config files."
 
     return f"""You are DocForge, an expert technical documentation generator. You analyze source code and generate comprehensive, well-structured documentation.
 
@@ -222,6 +228,12 @@ async def generate_docs_from_code(request: GenerateRequest) -> tuple[dict[str, s
         targets.append("ARCHITECTURE.md")
     if options.include_changelog:
         targets.append("CHANGELOG.md")
+    if options.include_introduction:
+        targets.append("introduction.md")
+    if options.include_features:
+        targets.append("features.md")
+    if options.include_configuration:
+        targets.append("configuration.md")
         
     if not targets:
         return {}, 0
@@ -231,6 +243,27 @@ async def generate_docs_from_code(request: GenerateRequest) -> tuple[dict[str, s
         logger.info(f"Generating {filename} for project {request.project_name}...")
         prompt = build_prompt_for_file(request, filename)
         sys_prompt = get_system_prompt(filename)
+        
+        # If there is existing content for this document, instruct AI to edit & append
+        if request.existing_docs and filename in request.existing_docs and request.existing_docs[filename]:
+            existing_content = request.existing_docs[filename]
+            prompt += (
+                f"\n\nAn existing version of {filename} is already present in the workspace:\n"
+                f"--- EXISTING {filename} START ---\n"
+                f"{existing_content}\n"
+                f"--- EXISTING {filename} END ---\n\n"
+                f"CRITICAL: Do NOT rewrite {filename} from scratch or ignore the existing content. "
+                f"Your task is to EDIT, REFINE, and APPEND to the existing content, adding new details, "
+                f"sections, or updates from the newly scanned code files while keeping the original structure, "
+                f"introduction, and existing manual information intact. Integrate the new information smoothly."
+            )
+            sys_prompt += (
+                f"\n\nCRITICAL: An existing version of {filename} is provided. "
+                f"You must NOT discard or rewrite the existing content from scratch. "
+                f"Your task is to EDIT, REFINE, and APPEND to the existing text. Keep all useful existing "
+                f"information, formatting, and structure, and merge in updates/details based on the new codebase scan. "
+                f"Return the complete updated markdown."
+            )
         
         generated_text, tokens = await ai.generate(
             prompt=prompt,

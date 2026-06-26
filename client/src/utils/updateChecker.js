@@ -10,7 +10,7 @@ export function startUpdateCheck() {
   updatePromise = new Promise((resolve) => {
     const req = https.get(
       'https://registry.npmjs.org/@ultramaxoo/docforge/latest',
-      { timeout: 1500 },
+      { timeout: 1000 },
       (res) => {
         let data = '';
         res.on('data', (chunk) => {
@@ -39,6 +39,24 @@ export function startUpdateCheck() {
 }
 
 /**
+ * Compare semantic versions to check if latest is newer than current.
+ * @param {string} latest 
+ * @param {string} current 
+ * @returns {boolean}
+ */
+function isNewerVersion(latest, current) {
+  const latestParts = latest.split('.').map(Number);
+  const currentParts = current.split('.').map(Number);
+  for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+    const l = latestParts[i] || 0;
+    const c = currentParts[i] || 0;
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+  return false;
+}
+
+/**
  * Display update warning if a newer version exists.
  * @param {string} currentVersion 
  */
@@ -46,10 +64,10 @@ export async function displayUpdateMessage(currentVersion) {
   if (!updatePromise) return;
   try {
     const latestVersion = await updatePromise;
-    if (latestVersion && latestVersion !== currentVersion) {
+    if (latestVersion && isNewerVersion(latestVersion, currentVersion)) {
       console.log(
         chalk.yellow(`\nUpdate available: ${chalk.gray(currentVersion)} → ${chalk.green(latestVersion)}`) +
-        chalk.yellow(`\nRun ${chalk.cyan('npm install -g @ultramaxoo/docforge')} to update.\n`)
+        chalk.yellow(`\nRun ${chalk.cyan('docforge update')} to update.\n`)
       );
     }
   } catch (e) {

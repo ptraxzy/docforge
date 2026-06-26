@@ -24,7 +24,15 @@ export async function compileDocs(docsDir) {
   }
   
   const files = await fs.readdir(docsDir);
-  const mdFiles = files.filter(f => f.endsWith('.md'));
+  const mdFiles = files.filter(f => {
+    if (!f.endsWith('.md')) return false;
+    const name = f.toLowerCase();
+    // Exclude developer/private/sensitive files from the public site compilation
+    if (name === 'readme.md' || name === 'api.md' || name === 'architecture.md' || name === 'changelog.md') {
+      return false;
+    }
+    return true;
+  });
   
   for (const file of mdFiles) {
     const filePath = path.join(docsDir, file);

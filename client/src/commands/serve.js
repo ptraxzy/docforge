@@ -6,14 +6,8 @@ import { fileURLToPath } from 'url';
 
 export async function serve(options) {
   const port = options.port || process.env.PORT || '8000';
-  const aiUrl = options.aiUrl || process.env.AI_BASE_URL || 'http://localhost:11434/v1';
-  const aiModel = options.aiModel || process.env.AI_MODEL || 'llama3';
-  const aiKey = options.aiKey || process.env.AI_API_KEY || '';
 
   console.log(chalk.blue('DocForge Server\n'));
-  console.log(chalk.gray(`   AI Provider:  ${aiUrl}`));
-  console.log(chalk.gray(`   AI Model:     ${aiModel}`));
-  console.log(chalk.gray(`   API Key:      ${aiKey ? '***' + aiKey.slice(-4) : '(none — self-hosted mode)'}`));
   console.log(chalk.gray(`   Port:         ${port}\n`));
 
   // Get server path (relative to this file)
@@ -35,11 +29,6 @@ export async function serve(options) {
 
   // Set up environment
   const env = { ...process.env };
-  env.AI_BASE_URL = aiUrl;
-  env.AI_MODEL = aiModel;
-  if (aiKey) {
-    env.AI_API_KEY = aiKey;
-  }
   env.PORT = port;
 
   // Run uvicorn

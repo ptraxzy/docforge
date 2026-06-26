@@ -56,7 +56,7 @@ async function pingServer(serverUrl) {
 /**
  * Generate docs via the AI server.
  */
-async function generateViaAI(serverUrl, projectName, framework, codeFiles, docOptions) {
+async function generateViaAI(serverUrl, projectName, framework, codeFiles, docOptions, existingDocs = null) {
   const { default: axios } = await import('axios');
 
   const payload = {
@@ -68,6 +68,7 @@ async function generateViaAI(serverUrl, projectName, framework, codeFiles, docOp
     })),
     options: docOptions,
     framework: framework,
+    existing_docs: existingDocs,
   };
 
   const response = await axios.post(`${serverUrl}/generate`, payload, {
@@ -120,12 +121,12 @@ export async function buildSite(options = {}) {
 
   console.log(chalk.gray(`Docs directory: ${docsDir}`));
 
-  // 3. Check if docs need generation
-  if (await needsGeneration(docsDir)) {
-    console.log(chalk.yellow('Docs folder is empty or contains only placeholders. Generating documentation...'));
-
+  // 3. Generate/Update docs via AI unless compile-only is set
+  if (options.compileOnly) {
+    console.log(chalk.green('[OK] Compile-only mode: skipping AI analysis and generation.'));
+  } else {
     // Scan code files
-    console.log(chalk.yellow('Scanning project files...'));
+    console.log(chalk.yellow('Scanning project files for AI documentation generation...'));
     let codeFiles;
     try {
       codeFiles = await scanCodeFiles(projectDir);
@@ -141,13 +142,11 @@ export async function buildSite(options = {}) {
 
     console.log(chalk.green(`[OK] Found ${codeFiles.length} code files`));
 
-    // Determine doc targets based on project size
-    const isLargeProject = codeFiles.length >= 15;
+    // Determine user doc targets
     const docOptions = {
-      include_readme: true,
-      include_api: true,
-      include_architecture: isLargeProject,
-      include_changelog: isLargeProject,
+      include_introduction: true,
+      include_features: true,
+      include_configuration: true,
     };
 
     const projectName = getProjectName(projectDir);
@@ -160,18 +159,90 @@ export async function buildSite(options = {}) {
     let generatedDocs;
 
     if (serverAvailable) {
-      console.log(chalk.green('[OK] AI server is reachable. Generating docs via AI...'));
-      try {
-        generatedDocs = await generateViaAI(serverUrl, projectName, framework, codeFiles, docOptions);
-        console.log(chalk.green(`[OK] AI generated ${Object.keys(generatedDocs).length} documents`));
-      } catch (e) {
-        console.log(chalk.yellow(`[Warn] AI generation failed: ${e.message}. Falling back to offline mode.`));
-        generatedDocs = await generateOfflineDocs(projectDir, framework, codeFiles);
-        console.log(chalk.green(`[OK] Offline generated ${Object.keys(generatedDocs).length} documents`));
-      }
+      console.log(chalk.green('[OK] AI server is reachable.'));
+
+      const targets = ['introduction.md', 'features.md', 'configuration.md'];
+
+      console.log(chalk.bold.magenta('\n🧠 AI THINKING SYSTEM'));
+      console.log(chalk.gray('──────────────────────────────────────────────'));
+      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log(chalk.blue('  [Step 1/3] Checking target documentation pages...'));
+
+      const docs = {};
+      const promises = targets.map(async (filename) => {
+        const filePath = path.join(docsDir, filename);
+        const exists = await fs.pathExists(filePath);
+        let existingContent = null;
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (exists) {
+          console.log(`    └─ ${chalk.yellow('EDIT & APPEND')} : ${chalk.cyan(filename)} (existing content loaded)`);
+          existingContent = await fs.readFile(filePath, 'utf-8');
+        } else {
+          console.log(`    └─ ${chalk.green('AUTO CREATE')}   : ${chalk.cyan(filename)} (file not found, will create new)`);
+        }
+
+        // Single-file options
+        const singleOptions = {
+          include_readme: false,
+          include_api: false,
+          include_architecture: false,
+          include_changelog: false,
+          include_introduction: filename === 'introduction.md',
+          include_features: filename === 'features.md',
+          include_configuration: filename === 'configuration.md',
+        };
+
+        const existingDocsPayload = existingContent ? { [filename]: existingContent } : null;
+
+        try {
+          const startTime = Date.now();
+          const singleDocs = await generateViaAI(
+            serverUrl,
+            projectName,
+            framework,
+            codeFiles,
+            singleOptions,
+            existingDocsPayload
+          );
+          const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+          docs[filename] = singleDocs[filename];
+          console.log(chalk.green(`   [OK] Generated ${filename} via AI (${duration}s)`));
+        } catch (e) {
+          console.log(chalk.yellow(`   [Warn] AI failed for ${filename}: ${e.message}. Generating offline...`));
+          const offlineDocs = await generateOfflineDocs(projectDir, framework, codeFiles);
+          if (filename === 'introduction.md') {
+            docs[filename] = offlineDocs['README.md'] || '';
+          } else if (filename === 'features.md') {
+            docs[filename] = offlineDocs['API.md'] || '';
+          } else if (filename === 'configuration.md') {
+            docs[filename] = offlineDocs['ARCHITECTURE.md'] || '';
+          } else {
+            docs[filename] = offlineDocs[filename] || '';
+          }
+          console.log(chalk.green(`   [OK] Generated ${filename} offline`));
+        }
+      });
+
+      console.log(chalk.blue('\n  [Step 2/3] Analyzing codebase framework & structure...'));
+      await new Promise(resolve => setTimeout(resolve, 250));
+      console.log(`    └─ Detected Framework: ${chalk.bold.green(framework.toUpperCase())}`);
+      console.log(`    └─ Scanned Code Files: ${chalk.bold.green(codeFiles.length)} files`);
+
+      await new Promise(resolve => setTimeout(resolve, 350));
+      console.log(chalk.blue('\n  [Step 3/3] Launching AI reasoning engine...'));
+      await new Promise(resolve => setTimeout(resolve, 200));
+      console.log(chalk.magenta('    └─ 🧠 AI is thinking, reasoning, and merging documents... Please wait.\n'));
+
+      await Promise.all(promises);
+      generatedDocs = docs;
     } else {
       console.log(chalk.yellow('[Info] AI server not available. Using offline documentation generator.'));
-      generatedDocs = await generateOfflineDocs(projectDir, framework, codeFiles);
+      const offlineDocs = await generateOfflineDocs(projectDir, framework, codeFiles);
+      generatedDocs = {
+        'introduction.md': offlineDocs['README.md'] || '',
+        'features.md': offlineDocs['API.md'] || '',
+        'configuration.md': offlineDocs['ARCHITECTURE.md'] || '',
+      };
       console.log(chalk.green(`[OK] Offline generated ${Object.keys(generatedDocs).length} documents`));
     }
 
@@ -183,8 +254,6 @@ export async function buildSite(options = {}) {
       console.log(chalk.gray(`   [Saved] ${filename}`));
     }
     console.log('');
-  } else {
-    console.log(chalk.green('[OK] Docs folder has existing content. Skipping generation.'));
   }
 
   // 4. Compile docs database

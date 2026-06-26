@@ -34,6 +34,7 @@ Thumbs.db
 # DocForge
 docs/
 .docforge/
+.agents/
 
 # Docker
 *.log

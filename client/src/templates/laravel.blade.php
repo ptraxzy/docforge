@@ -67,6 +67,27 @@
       border-radius: 0.75rem;
       margin: 1.5rem 0;
       border: 1px solid rgba(255, 255, 255, 0.05);
+      background-color: #0f172a !important; /* slate-900 */
+      color: #f8fafc !important; /* slate-50 */
+    }
+    pre[class*="language-"] code {
+      background-color: transparent !important;
+      color: inherit !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      font-size: 0.875rem !important;
+    }
+    
+    /* Inline code styles */
+    .prose code:not(pre code) {
+      color: #7c3aed !important;
+      background-color: #f1f5f9 !important;
+      padding: 0.125rem 0.25rem !important;
+      border-radius: 0.25rem !important;
+    }
+    .dark .prose code:not(pre code) {
+      color: #a78bfa !important;
+      background-color: #1e293b !important;
     }
   </style>
 
@@ -138,42 +159,91 @@
       <aside :class="{ 'translate-x-0': mobileSidebarOpen, '-translate-x-full': !mobileSidebarOpen }" 
              class="fixed inset-y-0 left-0 z-30 w-64 transform border-r border-slate-200 bg-white px-4 pt-20 transition-transform duration-200 ease-in-out lg:sticky lg:top-16 lg:z-0 lg:h-[calc(100vh-4rem)] lg:translate-x-0 lg:border-none lg:bg-transparent lg:px-0 dark:border-slate-800 dark:bg-slate-950 lg:dark:bg-transparent">
         <nav class="space-y-1">
-          <p class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Documentation</p>
+          <p class="px-3 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">Documentation</p>
           <template x-for="(doc, key) in docs" :key="key">
-            <button @click="activeTab = key" 
-                    :class="activeTab === key ? 'bg-primary-50 font-medium text-primary-600 dark:bg-primary-950/40 dark:text-primary-400' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'"
-                    class="flex w-full items-center rounded-lg px-3 py-2 text-sm">
-              <svg class="mr-3 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span x-text="doc.title"></span>
-            </button>
+            <div class="space-y-1">
+              <!-- Main Doc button -->
+              <button @click="activeTab = key; activeSectionIdx = 0; expandedDocs[key] = !expandedDocs[key]" 
+                      :class="activeTab === key ? 'bg-primary-50 font-semibold text-primary-600 dark:bg-primary-950/40 dark:text-primary-400' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'"
+                      class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-all duration-200">
+                <div class="flex items-center min-w-0">
+                  <svg class="mr-3 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span class="truncate text-left" x-text="doc.title"></span>
+                </div>
+                <svg x-show="getSections(doc.html).length > 1"
+                     :class="expandedDocs[key] ? 'rotate-90' : ''" 
+                     class="h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200" 
+                     fill="none" 
+                     viewBox="0 0 24 24" 
+                     stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+
+              <!-- Nested tree (H2 sections) -->
+              <div x-show="expandedDocs[key] && getSections(doc.html).length > 1" 
+                   class="ml-5 border-l border-slate-200 dark:border-slate-800 pl-3 py-1 space-y-1">
+                <template x-for="(sec, idx) in getSections(doc.html)" :key="idx">
+                  <div class="space-y-1">
+                    <button @click="activeTab = key; activeSectionIdx = idx"
+                            :class="(activeTab === key && activeSectionIdx === idx) ? 'text-primary-600 font-semibold border-l-2 border-primary-600 -ml-[13px] pl-[11px] dark:text-primary-400' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'"
+                            class="flex w-full items-center py-1.5 pr-3 text-xs rounded-r-md transition-all text-left">
+                      <span class="truncate" x-text="(idx + 1) + '. ' + sec.title"></span>
+                    </button>
+
+                    <!-- H3 Sub-headings inside active H2 -->
+                    <div x-show="activeTab === key && activeSectionIdx === idx && getActiveSectionToc(key, idx).filter(item => item.level === 3).length > 0"
+                         class="ml-3 border-l border-slate-200 dark:border-slate-800 pl-2.5 py-0.5 space-y-1">
+                      <template x-for="h3 in getActiveSectionToc(key, idx).filter(item => item.level === 3)" :key="h3.id">
+                        <button @click="scrollToHeading(h3.id)"
+                                :class="activeSection === h3.id ? 'text-primary-600 dark:text-primary-400 font-semibold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100'"
+                                class="flex w-full items-center py-1 text-[11px] transition-all text-left">
+                          <span class="truncate" x-text="h3.text"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
           </template>
         </nav>
       </aside>
 
       <!-- Center Main Content -->
       <main class="min-w-0 flex-1 py-8 lg:py-12">
-        <article class="prose max-w-3xl dark:prose-invert prose-slate prose-headings:font-display prose-headings:font-bold prose-h1:text-4xl prose-h2:text-2xl prose-a:text-primary-600 dark:prose-a:text-primary-400 hover:prose-a:underline prose-pre:bg-slate-900 prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-img:rounded-xl">
-          <div x-html="activeDoc.html"></div>
+        <article class="prose max-w-4xl dark:prose-invert prose-slate prose-headings:font-display prose-headings:font-bold prose-h1:text-4xl prose-h2:text-2xl prose-a:text-primary-600 dark:prose-a:text-primary-400 hover:prose-a:underline prose-pre:bg-slate-900 prose-code:text-primary-600 dark:prose-code:text-primary-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-900 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-img:rounded-xl">
+          <!-- Live HTML Injected by Alpine -->
+          <div x-html="getSections(activeDoc.html)[activeSectionIdx]?.html || ''"></div>
         </article>
-      </main>
 
-      <!-- Right Sidebar Table of Contents (TOC) -->
-      <aside class="hidden w-64 shrink-0 lg:block lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] py-12">
-        <div x-show="activeDoc.toc && activeDoc.toc.length > 0">
-          <h3 class="font-display text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-4">On This Page</h3>
-          <ul class="space-y-2 border-l border-slate-200 dark:border-slate-800">
-            <template x-for="item in activeDoc.toc" :key="item.id">
-              <li :class="item.level === 3 ? 'pl-6' : 'pl-4'">
-                <a :href="'#' + item.id" 
-                   class="block text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
-                   x-text="item.text"></a>
-              </li>
-            </template>
-          </ul>
+        <!-- Pagination Buttons -->
+        <div x-show="prevButton || nextButton" class="mt-12 flex justify-between gap-4 border-t border-slate-200 pt-6 dark:border-slate-800" x-cloak>
+          <template x-if="prevButton">
+            <button @click="prevButton.onClick()"
+                    class="flex flex-col items-start gap-1 rounded-xl border border-slate-200 p-4 text-left hover:bg-slate-100/50 transition-all w-1/2 dark:border-slate-800 dark:hover:bg-slate-900/50">
+              <span class="text-xs text-slate-400 uppercase tracking-wider dark:text-slate-500" x-text="prevButton.label"></span>
+              <span class="text-sm font-bold text-primary-600 dark:text-primary-400">← <span x-text="prevButton.title"></span></span>
+            </button>
+          </template>
+          <template x-if="!prevButton">
+            <div class="w-1/2"></div>
+          </template>
+          
+          <template x-if="nextButton">
+            <button @click="nextButton.onClick()"
+                    class="flex flex-col items-end gap-1 rounded-xl border border-slate-200 p-4 text-right hover:bg-slate-100/50 transition-all w-1/2 dark:border-slate-800 dark:hover:bg-slate-900/50">
+              <span class="text-xs text-slate-400 uppercase tracking-wider dark:text-slate-500" x-text="nextButton.label"></span>
+              <span class="text-sm font-bold text-primary-600 dark:text-primary-400"><span x-text="nextButton.title"></span> →</span>
+            </button>
+          </template>
+          <template x-if="!nextButton">
+            <div class="w-1/2"></div>
+          </template>
         </div>
-      </aside>
+      </main>
 
     </div>
   </div>
@@ -193,6 +263,9 @@
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
         activeTab: '',
+        activeSectionIdx: 0,
+        expandedDocs: {},
+        activeSection: '',
         searchQuery: '',
         searchResults: [],
         mobileSidebarOpen: false,
@@ -204,33 +277,139 @@
           const keys = Object.keys(this.docs);
           if (keys.length > 0) {
             const hash = window.location.hash.slice(2);
-            if (keys.includes(hash)) {
-              this.activeTab = hash;
+            const parts = hash.split('#');
+            const tabKey = parts[0];
+
+            if (keys.includes(tabKey)) {
+              this.activeTab = tabKey;
             } else {
               this.activeTab = keys[0];
             }
+
+            keys.forEach(k => {
+              this.expandedDocs[k] = (k === this.activeTab);
+            });
           }
           
           this.$watch('darkMode', val => localStorage.setItem('darkMode', val));
           
           window.addEventListener('hashchange', () => {
             const hash = window.location.hash.slice(2);
-            if (Object.keys(this.docs).includes(hash)) {
-              this.activeTab = hash;
+            const parts = hash.split('#');
+            const tabKey = parts[0];
+            if (Object.keys(this.docs).includes(tabKey)) {
+              this.activeTab = tabKey;
             }
           });
           
-          this.$watch('activeTab', () => {
-            window.location.hash = '/' + this.activeTab;
+          this.$watch('activeTab', (newVal) => {
+            window.location.hash = '/' + newVal;
+            this.activeSectionIdx = 0;
+            this.expandedDocs[newVal] = true;
             this.highlightCode();
             this.mobileSidebarOpen = false;
+            this.scrollToTop();
+          });
+
+          this.$watch('activeSectionIdx', () => {
+            this.scrollToTop();
           });
           
           this.$nextTick(() => this.highlightCode());
+          this.setupScrollSpy();
         },
         
         get activeDoc() {
           return this.docs[this.activeTab] || { title: '', html: '', toc: [] };
+        },
+
+        getSections(htmlStr) {
+          if (!htmlStr) return [];
+          const parts = htmlStr.split(/<h2(?=\s|>)/);
+          const result = [];
+          
+          let hasIntro = parts[0] && parts[0].trim().length > 0;
+          if (hasIntro) {
+            result.push({
+              title: 'Overview',
+              html: parts[0]
+            });
+          }
+          
+          for (let i = 1; i < parts.length; i++) {
+            const sectionHtml = '<h2' + parts[i];
+            const match = sectionHtml.match(/<h2[^>]*>(.*?)<\/h2>/);
+            const title = match ? match[1].replace(/<[^>]*>/g, '') : `Section ${i}`;
+            result.push({
+              title: title,
+              html: sectionHtml
+            });
+          }
+          
+          if (result.length === 0) {
+            result.push({
+              title: 'Overview',
+              html: htmlStr
+            });
+          }
+          
+          return result;
+        },
+
+        getActiveSectionToc(docKey, secIdx) {
+          const doc = this.docs[docKey];
+          if (!doc || !doc.toc) return [];
+          
+          const result = [];
+          let currentH2Index = -1;
+          const parts = doc.html.split(/<h2(?=\s|>)/);
+          const hasIntro = parts[0] && parts[0].trim().length > 0;
+          
+          for (const item of doc.toc) {
+            if (item.level === 2) {
+              currentH2Index++;
+            }
+            const itemSectionIdx = hasIntro ? currentH2Index + 1 : currentH2Index;
+            const normalizedIdx = Math.max(0, itemSectionIdx);
+            
+            if (normalizedIdx === secIdx) {
+              result.push(item);
+            }
+          }
+          return result;
+        },
+
+        scrollToHeading(id) {
+          const element = document.getElementById(id);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            window.location.hash = '/' + this.activeTab + '#' + id;
+          }
+        },
+
+        scrollToTop() {
+          this.$nextTick(() => {
+            const article = document.querySelector('article');
+            if (article) {
+              article.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+          });
+        },
+
+        setupScrollSpy() {
+          window.addEventListener('scroll', () => {
+            const headings = Array.from(document.querySelectorAll('article h2, article h3'));
+            let current = '';
+            for (const heading of headings) {
+              const top = heading.getBoundingClientRect().top;
+              if (top < 150) {
+                current = heading.id;
+              } else {
+                break;
+              }
+            }
+            this.activeSection = current;
+          });
         },
         
         highlightCode() {
@@ -290,6 +469,61 @@
           this.activeTab = key;
           this.searchQuery = '';
           this.searchResults = [];
+        },
+
+        get prevButton() {
+          const keys = Object.keys(this.docs);
+          const currentDocIdx = keys.indexOf(this.activeTab);
+          const sections = this.getSections(this.activeDoc.html);
+          
+          if (this.activeSectionIdx > 0) {
+            return {
+              label: 'Previous',
+              title: sections[this.activeSectionIdx - 1].title,
+              onClick: () => { this.activeSectionIdx--; }
+            };
+          } else if (currentDocIdx > 0) {
+            const prevDocKey = keys[currentDocIdx - 1];
+            const prevDocSections = this.getSections(this.docs[prevDocKey].html);
+            return {
+              label: `Previous: ${this.docs[prevDocKey].title}`,
+              title: prevDocSections[prevDocSections.length - 1].title,
+              onClick: () => {
+                this.activeTab = prevDocKey;
+                this.$nextTick(() => {
+                  this.activeSectionIdx = prevDocSections.length - 1;
+                });
+              }
+            };
+          }
+          return null;
+        },
+
+        get nextButton() {
+          const keys = Object.keys(this.docs);
+          const currentDocIdx = keys.indexOf(this.activeTab);
+          const sections = this.getSections(this.activeDoc.html);
+          
+          if (this.activeSectionIdx < sections.length - 1) {
+            return {
+              label: 'Next',
+              title: sections[this.activeSectionIdx + 1].title,
+              onClick: () => { this.activeSectionIdx++; }
+            };
+          } else if (currentDocIdx < keys.length - 1) {
+            const nextDocKey = keys[currentDocIdx + 1];
+            return {
+              label: `Next: ${this.docs[nextDocKey].title}`,
+              title: this.getSections(this.docs[nextDocKey].html)[0]?.title || 'Overview',
+              onClick: () => {
+                this.activeTab = nextDocKey;
+                this.$nextTick(() => {
+                  this.activeSectionIdx = 0;
+                });
+              }
+            };
+          }
+          return null;
         }
       }
     }

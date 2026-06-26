@@ -1,115 +1,114 @@
-# DocForge CLI
+# DocForge CLI Client
 
-AI-powered documentation generator - open source CLI client.
+**AI-Powered Documentation & Site Generator — CLI Client**
 
-## Quick Start
+The DocForge CLI client is a lightweight command-line utility that scans your project source code, detects your framework, and generates clean markdown documentation files or compiles them into a premium responsive documentation site.
 
-### Connect to a server (recommended)
+---
 
-```bash
-# Install globally
-npm install -g docforge
+## Installation
 
-# Or use with npx
-npx docforge generate
+### Option 1: Global Installation (Recommended)
 
-# Set your DocForge server URL
-docforge set-server https://docforge-ptraxzy.loca.lt
-
-# Generate docs for current project
-docforge generate
-```
-
-### Run server locally
+Install globally on your system to run `docforge` directly from any directory:
 
 ```bash
-# Clone the full repo
-git clone https://github.com/yourname/docforge
-
-# Start AI server (Ollama)
-ollama serve && ollama pull llama3
-
-# Start DocForge server
-cd docforge/server
-cp .env.example .env
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-
-# In another terminal, use the CLI
-cd client
-npm install
-docforge generate
+npm install -g @ultramaxoo/docforge
 ```
 
-## Commands
+### Option 2: Run with NPX
 
-### `docforge generate [path]`
-
-Generate documentation for a project.
+Run instantly without global installation:
 
 ```bash
-# Generate docs in current directory
-docforge generate
-
-# Generate docs for specific path
-docforge generate ./my-project
-
-# Custom output directory
-docforge generate -o ./my-docs
-
-# Include only specific patterns
-docforge generate -i "*.js" "*.ts"
-
-# Exclude patterns
-docforge generate -e "node_modules/**" "*.test.js"
-
-# Use specific server
-docforge generate -s http://localhost:8000
-
-# Control which docs to generate
-docforge generate --architecture --changelog
-docforge generate --no-api
+npx @ultramaxoo/docforge generate
+npx @ultramaxoo/docforge build-site
 ```
 
-### `docforge init`
+---
 
-Initialize DocForge in current project.
+## Commands Reference
+
+### 1. `docforge init`
+Initializes a new DocForge config file at `.docforge/config.json` inside your project root and creates a default `docs/` workspace.
 
 ```bash
 docforge init
 ```
 
-### `docforge set-server <url>`
-
-Set the DocForge server URL.
+### 2. `docforge generate [path]`
+Scans the target directory files, detects language features, and contacts the DocForge server to generate markdown files.
 
 ```bash
-docforge set-server http://localhost:8000
-docforge set-server https://docforge-ptraxzy.loca.lt
+# Guided interactive generation
+docforge generate
+
+# Fast run on specific path
+docforge generate ./src
+
+# Exclude test files and include specific file types
+docforge generate -i "*.js" "*.ts" -e "**/*.test.js" "node_modules/**"
+
+# Only generate README.md and API.md
+docforge generate --readme --api --no-architecture --no-changelog
 ```
 
-### `docforge get-server`
+#### CLI Options:
+* `-o, --output <dir>`: Target folder for generated docs (default: `./`)
+* `-s, --server <url>`: Override the default backend server endpoint
+* `-i, --include <patterns...>`: Glob patterns to include
+* `-e, --exclude <patterns...>`: Glob patterns to exclude
+* `--readme` / `--no-readme`: Generate/Skip `README.md` (default: true)
+* `--api` / `--no-api`: Generate/Skip `API.md` (default: true)
+* `--architecture` / `--no-architecture`: Generate/Skip `ARCHITECTURE.md` (default: false)
+* `--changelog` / `--no-changelog`: Generate/Skip `CHANGELOG.md` (default: false)
 
-Show current server URL.
+---
+
+### 3. `docforge build-site`
+Scans your local directories, auto-detects your frontend framework (React Next.js, Vite/React, Laravel, or Static HTML), and builds a premium documentation site.
 
 ```bash
+# Build the site from docs folder into output directory
+docforge build-site --input ./docs --output ./docs-site
+
+# Compile directly from existing markdown docs without calling the AI
+docforge build-site --compile-only
+```
+
+#### CLI Options:
+* `-i, --input <dir>`: Directory containing markdown files (default: `./docs`)
+* `-o, --output <dir>`: Target directory for static HTML builds (default: `./docs-site`)
+* `--compile-only`: Skips any server checks/generation and compiles local documents instantly
+
+---
+
+### 4. `docforge set-server <url>` & `docforge get-server`
+Configure the DocForge CLI client to point to a specific API backend instance (e.g. your local self-hosted server or a custom corporate API gateway).
+
+```bash
+# Set server API endpoint
+docforge set-server http://localhost:8000
+
+# View current server API endpoint
 docforge get-server
 ```
 
-### `docforge serve`
+---
 
-Start a local DocForge server (requires full repo).
+### 5. `docforge serve`
+Starts a local self-hosted instance of the DocForge backend server directly from the CLI.
 
 ```bash
-docforge serve
-docforge serve --port 9000
-docforge serve --ai-url http://localhost:11434/v1 --ai-model llama3
-docforge serve --ai-url https://api.openai.com/v1 --ai-key sk-your-key --ai-model gpt-4o-mini
+docforge serve --port 8000 --ai-url http://localhost:11434/v1 --ai-model llama3
 ```
 
-## Configuration
+---
 
-Server URL is stored in `~/.docforge/config.json`.
+## Configuration Files
+
+### 1. Global Config (`~/.docforge/config.json`)
+Stores global CLI settings:
 
 ```json
 {
@@ -117,12 +116,13 @@ Server URL is stored in `~/.docforge/config.json`.
 }
 ```
 
-Project-specific options can be configured in `.docforge/config.json`:
+### 2. Project Config (`.docforge/config.json`)
+Configure project-specific scopes and options:
 
 ```json
 {
   "version": "0.1.0",
-  "project": "my-project",
+  "project": "my-awesome-app",
   "options": {
     "include_readme": true,
     "include_api": true,
@@ -132,25 +132,7 @@ Project-specific options can be configured in `.docforge/config.json`:
 }
 ```
 
-## How It Works
-
-```
-┌─────────────────────────────────────────────────────┐
-│                 DEVELOPER MACHINE                    │
-│                                                     │
-│   docforge generate ./my-project                    │
-│              │                                      │
-└──────────────┼──────────────────────────────────────┘
-               │ HTTP
-               ▼
-┌─────────────────────────────────────────────────────┐
-│               DOCFORGE SERVER                        │
-│                                                     │
-│   1. Receives code files                            │
-│   2. Sends to AI (your provider)                    │
-│   3. Returns generated markdown docs                 │
-└─────────────────────────────────────────────────────┘
-```
+---
 
 ## License
 

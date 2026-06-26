@@ -9,20 +9,21 @@ import { setServerUrl, getServerUrl } from './utils/config.js';
 import { startUpdateCheck, displayUpdateMessage } from './utils/updateChecker.js';
 import chalk from 'chalk';
 import prompts from 'prompts';
+import { execSync } from 'child_process';
 
 // Start checking for updates in the background immediately
 startUpdateCheck();
 
 const program = new Command();
 
-program.hook('postAction', async () => {
+program.hook('preAction', async () => {
   await displayUpdateMessage(program.version());
 });
 
 program
   .name('docforge')
   .description('AI-powered documentation generator - open source')
-  .version('0.1.8');
+  .version('0.4.2');
 
 // Set server URL
 program
@@ -50,7 +51,7 @@ program
 program
   .command('generate [path]')
   .description('Generate documentation for a project')
-  .option('-o, --output <dir>', 'Output directory', './docs')
+  .option('-o, --output <dir>', 'Output directory', './')
   .option('-s, --server <url>', 'Server URL override')
   .option('-i, --include <patterns...>', 'File patterns to include')
   .option('-e, --exclude <patterns...>', 'File patterns to exclude')
@@ -70,6 +71,7 @@ program
   .description('Build a premium documentation website from markdown files')
   .option('-i, --input <dir>', 'Directory containing markdown files', './docs')
   .option('-o, --output <dir>', 'Output directory (only applicable for static HTML)', './docs-site')
+  .option('--compile-only', 'Compile existing markdown files directly without calling the AI')
   .action(buildSite);
 
 // Initialize docforge in current directory
@@ -83,12 +85,25 @@ program
   .command('serve')
   .description('Start the DocForge server locally')
   .option('-p, --port <port>', 'Port to listen on', '8000')
-  .option('--ai-url <url>', 'AI provider base URL (OpenAI-compatible)')
-  .option('--ai-model <model>', 'AI model name')
-  .option('--ai-key <key>', 'AI provider API key (optional for self-hosted)')
   .action(serve);
 
+// Self-update command
+program
+  .command('update')
+  .description('Update DocForge to the latest version')
+  .action(() => {
+    console.log(chalk.yellow('Checking and updating DocForge to the latest version...'));
+    try {
+      execSync('npm install -g @ultramaxoo/docforge', { stdio: 'inherit' });
+      console.log(chalk.green('\n[Success] DocForge has been updated successfully!'));
+    } catch (error) {
+      console.error(chalk.red(`\n[Error] Failed to update: ${error.message}`));
+      console.log(chalk.yellow('Please try running: npm install -g @ultramaxoo/docforge manually.'));
+    }
+  });
+
 async function showMainMenu() {
+  await displayUpdateMessage(program.version());
   console.log(chalk.bold.blue('DocForge - Interactive Control Panel\n'));
   
   const response = await prompts({
